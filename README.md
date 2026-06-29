@@ -3,7 +3,7 @@
 > _"Know your risk before it becomes your reality."_
 > An end-to-end clinical decision-support system that predicts Type 2 diabetes risk and explains every prediction using Explainable AI.
 
-[![CI](https://github.com/S-Mwaura/diabetes-risk-prediction-xai/actions/workflows/ci.yml/badge.svg)](https://github.com/S-Mwaura/diabetes-risk-prediction-xai/actions/workflows/ci.yml)
+[![CI](https://github.com/Orandifelix/diabetes-risk-prediction-xai/actions/workflows/ci.yml/badge.svg)](https://github.com/S-Mwaura/diabetes-risk-prediction-xai/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Python 3.10+](https://img.shields.io/badge/Python-3.10+-blue?logo=python&logoColor=white)](https://www.python.org/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.111-009688?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/)
