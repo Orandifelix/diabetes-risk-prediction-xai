@@ -211,7 +211,7 @@ If you encounter issues, have suggestions for improvements, or want to contribut
 | Angela Masaki  | [@MoonwaMasaki](https://github.com/MoonwaMasaki) | Data Engineering · EDA           |
 | Diana Byegon   | [@byegond-beep](https://github.com/byegond-beep) | Feature Engineering · Evaluation |
 | Kevin Kisengu  | [@K-OK27](https://github.com/K-OK27)             | Explainability · XAI             |
-| Orandi Felix   | [@Orandifelix](https://github.com/Orandifelix)   | Documentation · Reporting        |
+| Orandi Felix   | [@Orandifelix](https://github.com/Orandifelix)   | Documentation · Modeling         |
 
 ---
 
