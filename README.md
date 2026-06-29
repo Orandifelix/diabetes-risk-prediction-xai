@@ -178,20 +178,7 @@ diabetes-risk-prediction-xai/
 └── requirements.txt                # Pip dependency list
 ```
 
----
-
-## Repository Navigation
-
-| Resource          | Link                                                                       |
-| ----------------- | -------------------------------------------------------------------------- |
-| 📓 Final Notebook | [notebooks/diabetes_prediction.ipynb](notebooks/diabetes_prediction.ipynb) |
-| 📄 Notebook PDF   | [notebooks/notebook.pdf](notebooks/notebook.pdf)                           |
-| 📊 Presentation   | [presentations/presentation.pdf](presentations/presentation.pdf)           |
-| 🗒 Speaker Notes  | [presentations/speaker_notes.md](presentations/speaker_notes.md)           |
-| 📋 Final Report   | [reports/final_report.pdf](reports/final_report.pdf)                       |
-| 📝 Proposal       | [reports/proposal.pdf](reports/proposal.pdf)                               |
-| 🏛 Architecture   | [docs/architecture.md](docs/architecture.md)                               |
-| 🔬 Methodology    | [docs/methodology.md](docs/methodology.md)                                 |
+                      |
 
 ---
 
