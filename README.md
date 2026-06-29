@@ -3,17 +3,30 @@
 > _"Know your risk before it becomes your reality."_
 > An end-to-end clinical decision-support system that predicts Type 2 diabetes risk and explains every prediction using Explainable AI.
 
-[![CI](https://github.com/Orandifelix/diabetes-risk-prediction-xai/actions/workflows/ci.yml/badge.svg)](https://github.com/S-Mwaura/diabetes-risk-prediction-xai/actions/workflows/ci.yml)
+[![CI](https://github.com/Orandifelix/diabetes-risk-prediction-xai/actions/workflows/ci.yml/badge.svg)](https://github.com/Orandifelix/diabetes-risk-prediction-xai/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Python 3.10+](https://img.shields.io/badge/Python-3.10+-blue?logo=python&logoColor=white)](https://www.python.org/)
-[![FastAPI](https://img.shields.io/badge/FastAPI-0.111-009688?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/)
-[![Next.js](https://img.shields.io/badge/Next.js-14-black?logo=next.js&logoColor=white)](https://nextjs.org/)
 [![XGBoost](https://img.shields.io/badge/XGBoost-ML-orange?logo=python&logoColor=white)](https://xgboost.readthedocs.io/)
 [![SHAP](https://img.shields.io/badge/XAI-SHAP%20%7C%20LIME-purple)](https://shap.readthedocs.io/)
 
 ---
 
 ![Diabetes Risk Predictor](images/08_presentation/header.png)
+
+---
+
+## Table of Contents
+
+- [Overview](#overview)
+- [Business Understanding and Data Understanding](#business-understanding-and-data-understanding)
+- [Modeling and Evaluation](#modeling-and-evaluation)
+- [Conclusion](#conclusion)
+- [Repository Structure](#repository-structure)
+- [Repository Navigation](#repository-navigation)
+- [Reproduction & Contribution](#reproduction--contribution)
+- [Contributors](#contributors)
+- [License](#license)
+- [References](#references)
 
 ---
 
@@ -31,13 +44,12 @@ Chronic disease prediction is one of the highest-impact applications of machine 
 
 This project bridges that gap using Explainable AI (XAI). SHAP (SHapley Additive exPlanations) provides global and local feature attributions — showing which variables most influence a prediction for any individual patient. LIME (Local Interpretable Model-Agnostic Explanations) generates human-readable decision explanations for each case. Together, these techniques transform a predictive model into a transparent decision-support tool (Lundberg & Lee, 2017; Ribeiro et al., 2016).
 
-<!-- Uncomment and update once EDA is complete -->
-<!-- ### Key Findings from EDA -->
+<!-- Uncomment once EDA figures are saved to images/02_eda/ -->
 <!-- ![Class Distribution](images/02_eda/class_distribution.png) -->
 <!-- ![Correlation Heatmap](images/02_eda/correlation_heatmap.png) -->
 <!-- ![Feature Distributions](images/02_eda/feature_distributions.png) -->
 
-**Dataset:** The [Diabetes Prediction Dataset](https://www.kaggle.com/) sourced from Kaggle contains **N patients** with clinical features including glucose levels, BMI, age, blood pressure, insulin, skin thickness, diabetes pedigree function, and number of pregnancies. The target variable is a binary diabetes diagnosis outcome.
+**Dataset:** The [Diabetes Prediction Dataset](https://www.kaggle.com/) sourced from Kaggle contains clinical features including glucose levels, BMI, age, blood pressure, and insulin, with a binary diabetes diagnosis outcome.
 
 | Feature           | Description                                                       |
 | ----------------- | ----------------------------------------------------------------- |
@@ -48,7 +60,7 @@ This project bridges that gap using Explainable AI (XAI). SHAP (SHapley Additive
 | Insulin           | 2-hour serum insulin (µU/ml)                                      |
 | Skin Thickness    | Triceps skinfold thickness (mm)                                   |
 | Pregnancies       | Number of times pregnant                                          |
-| Diabetes Pedigree | Diabetes pedigree function (family history score)                 |
+| Diabetes Pedigree | Family history diabetes risk score                                |
 | **Outcome**       | **1 = Diabetic, 0 = Non-diabetic (target variable)**              |
 
 ---
@@ -70,7 +82,7 @@ We trained and compared six classification algorithms, with Logistic Regression 
 
 The final selected model (**XGBoost**) achieved an accuracy of **—%** and ROC-AUC of **—**, outperforming the logistic regression baseline by **—** points on F1-Score. Cross-validation (5-fold) was applied to ensure robustness, and SMOTE was used to address class imbalance in the training set.
 
-<!-- Uncomment once evaluation images are saved -->
+<!-- Uncomment once evaluation figures are saved -->
 <!-- ![Confusion Matrix](images/05_evaluation/confusion_matrix.png) -->
 <!-- ![ROC Curve](images/05_evaluation/roc_curve.png) -->
 <!-- ![Model Comparison](images/05_evaluation/model_comparison.png) -->
@@ -87,7 +99,7 @@ SHAP global feature importance identified the top predictors of diabetes risk. L
 
 ## Conclusion
 
-<!-- Update with final results after model evaluation is complete -->
+<!-- Update with final results after evaluation is complete -->
 
 This project demonstrates that Type 2 diabetes risk can be predicted from routine clinical indicators with high accuracy, and that Explainable AI techniques make those predictions interpretable and actionable for clinical stakeholders. The system is intended as a **screening support tool** — not a diagnostic replacement — to flag high-risk individuals for follow-up clinical evaluation.
 
@@ -106,128 +118,100 @@ This project demonstrates that Type 2 diabetes risk can be predicted from routin
 
 ---
 
-## System Architecture
+## Repository Structure
 
 ```
-Patient Input (Web UI)
-        │
-        ▼
-  Next.js Frontend
-        │  HTTP / REST
-        ▼
-  FastAPI Backend  ──────────────────────────────────┐
-        │                                             │
-        ▼                                             ▼
-  Inference Pipeline                      Analytics Endpoint
-  (XGBoost + Preprocessor)               (Batch statistics)
-        │
-        ├── Single Prediction  →  Risk score + SHAP explanation
-        └── Batch Prediction   →  CSV upload + bulk results + LIME
+diabetes-risk-prediction-xai/
+│
+├── .github/
+│   └── workflows/
+│       └── ci.yml                  # Continuous integration pipeline
+│
+├── datasets/
+│   ├── raw/                        # Original unmodified source data
+│   └── processed/                  # Cleaned and feature-engineered data
+│
+├── docs/
+│   ├── architecture.md             # System design and component overview
+│   ├── dashboard.md                # Dashboard usage and API reference
+│   └── methodology.md              # Modelling decisions and rationale
+│
+├── images/
+│   ├── 01_data_understanding/      # Dataset overview figures
+│   ├── 02_eda/                     # EDA plots and distributions
+│   ├── 03_feature_engineering/     # Feature selection and encoding figures
+│   ├── 04_modeling/                # Training curves and tuning results
+│   ├── 05_evaluation/              # Confusion matrix, ROC, model comparison
+│   ├── 06_interpretability/        # SHAP and LIME visualizations
+│   ├── 07_dashboard/               # Dashboard screenshots
+│   └── 08_presentation/            # Header image and slide exports
+│
+├── models/
+│   ├── final_model.joblib          # Trained XGBoost classifier
+│   ├── preprocessor.joblib         # Fitted preprocessing pipeline
+│   └── metadata.json               # Model version, metrics, feature names
+│
+├── notebooks/
+│   ├── diabetes_prediction.ipynb   # Final notebook — runs end-to-end
+│   └── notebook.pdf                # Exported PDF version
+│
+├── presentations/
+│   ├── presentation.pptx           # Editable slide deck
+│   ├── presentation.pdf            # PDF export for submission
+│   └── speaker_notes.md            # Presenter notes and talking points
+│
+├── reports/
+│   ├── final_report.pdf            # Comprehensive project report
+│   └── proposal.pdf                # Approved capstone proposal
+│
+├── submission/
+│   ├── github.pdf                  # GitHub repository PDF snapshot
+│   ├── notebook.pdf                # Notebook PDF for submission
+│   └── presentation.pdf            # Presentation PDF for submission
+│
+├── .gitignore                      # Excludes data files, envs, caches
+├── CHANGELOG.md                    # Version history and release notes
+├── CONTRIBUTING.md                 # Contribution guide and setup steps
+├── LICENSE                         # MIT License
+├── README.md                       # Project home page (this file)
+├── environment.yml                 # Conda environment specification
+└── requirements.txt                # Pip dependency list
 ```
 
 ---
 
 ## Repository Navigation
 
-```
-diabetes-risk-prediction-xai/
-│
-├── notebooks/              → Jupyter notebooks (EDA through evaluation)
-├── models/                 → Trained model and preprocessing artifacts
-├── datasets/               → Raw and processed data
-│   ├── raw/
-│   └── processed/
-├── images/                 → All figures organized by project phase
-│   ├── 01_data_understanding/
-│   ├── 02_eda/
-│   ├── 03_feature_engineering/
-│   ├── 04_modeling/
-│   ├── 05_evaluation/
-│   ├── 06_interpretability/
-│   ├── 07_dashboard/
-│   └── 08_presentation/
-├── app/                    → FastAPI backend + Next.js frontend
-├── reports/                → Final report and project proposal
-├── presentations/          → Slides and speaker notes
-├── docs/                   → Architecture and methodology docs
-├── scripts/                → Dev, training, and monitoring scripts
-└── .github/workflows/      → CI/CD and model monitoring pipelines
-```
-
 | Resource          | Link                                                                       |
 | ----------------- | -------------------------------------------------------------------------- |
 | 📓 Final Notebook | [notebooks/diabetes_prediction.ipynb](notebooks/diabetes_prediction.ipynb) |
+| 📄 Notebook PDF   | [notebooks/notebook.pdf](notebooks/notebook.pdf)                           |
 | 📊 Presentation   | [presentations/presentation.pdf](presentations/presentation.pdf)           |
-| 📄 Final Report   | [reports/final_report.pdf](reports/final_report.pdf)                       |
+| 🗒 Speaker Notes  | [presentations/speaker_notes.md](presentations/speaker_notes.md)           |
+| 📋 Final Report   | [reports/final_report.pdf](reports/final_report.pdf)                       |
+| 📝 Proposal       | [reports/proposal.pdf](reports/proposal.pdf)                               |
 | 🏛 Architecture   | [docs/architecture.md](docs/architecture.md)                               |
-| 🔌 API Docs       | [docs/dashboard.md](docs/dashboard.md)                                     |
+| 🔬 Methodology    | [docs/methodology.md](docs/methodology.md)                                 |
 
 ---
 
-## Reproducing This Project
+## Reproduction & Contribution
 
-### Prerequisites
+All technical steps required to replicate this pipeline — from environment setup to data download, preprocessing, model training, and SHAP interpretation — are explicitly documented in [`CONTRIBUTING.md`](CONTRIBUTING.md).
 
-- Python 3.10+
-- Conda _(recommended)_ or pip
-- Node.js 18+ _(for the frontend dashboard)_
-- Git
-
-### Setup
-
-**1. Clone the repository**
-
-```bash
-git clone https://github.com/S-Mwaura/diabetes-risk-prediction-xai.git
-cd diabetes-risk-prediction-xai
-```
-
-**2. Create and activate the environment**
-
-```bash
-# With Conda (recommended)
-conda env create -f environment.yml
-conda activate diabetes-xai
-
-# Or with pip
-pip install -r requirements.txt
-```
-
-**3. Download the dataset**
-
-```bash
-bash scripts/download_dataset.sh
-```
-
-**4. Train and save the model**
-
-```bash
-bash scripts/train_and_save.sh
-```
-
-**5. Launch the full application**
-
-```bash
-bash scripts/run_dev.sh
-```
-
-| Service            | URL                        |
-| ------------------ | -------------------------- |
-| Frontend dashboard | http://localhost:3000      |
-| FastAPI backend    | http://localhost:8000      |
-| API docs (Swagger) | http://localhost:8000/docs |
+If you encounter issues, have suggestions for improvements, or want to contribute new features, please open an issue or submit a pull request. Continuous integration status is available on the [GitHub Actions Dashboard](https://github.com/Orandifelix/diabetes-risk-prediction-xai/actions).
 
 ---
 
 ## Contributors
 
-| Name           | GitHub                                           | Role                   |
-| -------------- | ------------------------------------------------ | ---------------------- |
-| Stephen Mwaura | [@S-Mwaura](https://github.com/S-Mwaura)         | Project Lead · Backend |
-| Angela Masaki  | [@MoonwaMasaki](https://github.com/MoonwaMasaki) | Data Engineering · EDA |
-| Diana Byegon   | [@byegond-beep](https://github.com/byegond-beep) | Modeling · Evaluation  |
-| Kevin Kisengu  | [@K-OK27](https://github.com/K-OK27)             | Explainability · XAI   |
-| Orandi Felix   | [@Orandifelix](https://github.com/Orandifelix)   | Frontend · Dashboard   |
+| Name           | GitHub                                           | Role                             |
+| -------------- | ------------------------------------------------ | -------------------------------- |
+| Stephen Mwaura | [@S-Mwaura](https://github.com/S-Mwaura)         | Project Lead · Modeling          |
+| Angela Masaki  | [@MoonwaMasaki](https://github.com/MoonwaMasaki) | Data Engineering · EDA           |
+| Diana Byegon   | [@byegond-beep](https://github.com/byegond-beep) | Feature Engineering · Evaluation |
+| Kevin Kisengu  | [@K-OK27](https://github.com/K-OK27)             | Explainability · XAI             |
+| Orandi Felix   | [@Orandifelix](https://github.com/Orandifelix)   | Documentation · Reporting        |
 
 ---
 
@@ -239,6 +223,8 @@ This project is licensed under the MIT License — see the [LICENSE](LICENSE) fi
 
 ## References
 
+Carvalho, D. V., Pereira, E. M., & Cardoso, J. S. (2019). Machine learning interpretability: A survey on methods and metrics. _Electronics, 8_(8), 832.
+
 International Diabetes Federation. (2021). _IDF Diabetes Atlas_ (10th ed.). https://www.diabetesatlas.org
 
 Lundberg, S. M., & Lee, S. I. (2017). A unified approach to interpreting model predictions. _Advances in Neural Information Processing Systems, 30_, 4765–4774.
@@ -248,5 +234,3 @@ Obermeyer, Z., & Emanuel, E. J. (2016). Predicting the future — big data, mach
 Rajkomar, A., Dean, J., & Kohane, I. (2019). Machine learning in medicine. _New England Journal of Medicine, 380_(14), 1347–1358.
 
 Ribeiro, M. T., Singh, S., & Guestrin, C. (2016). "Why should I trust you?" Explaining the predictions of any classifier. _Proceedings of the 22nd ACM SIGKDD International Conference on Knowledge Discovery and Data Mining_, 1135–1144.
-
-Carvalho, D. V., Pereira, E. M., & Cardoso, J. S. (2019). Machine learning interpretability: A survey on methods and metrics. _Electronics, 8_(8), 832.
