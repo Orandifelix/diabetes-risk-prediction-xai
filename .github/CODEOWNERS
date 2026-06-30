@@ -1,0 +1,33 @@
+# CODEOWNERS
+# Assigns automatic reviewers to pull requests based on file path.
+# At least one listed owner must approve before a PR can merge into main.
+# Format: <path_pattern>  <github_username>
+# Docs: https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+
+# ── Default owner for everything ──────────────────────────────
+*                               @Orandifelix
+
+# ── Notebooks — Angela and Diana review all notebook changes ──
+notebooks/                      @MoonwaMasaki @byegond-beep
+
+# ── Models — Stephen and Diana review model artifacts ─────────
+models/                         @S-Mwaura @byegond-beep
+
+# ── Explainability — Kevin reviews XAI work ───────────────────
+images/06_interpretability/     @K-OK27
+
+# ── Documentation — Orandi reviews all docs ───────────────────
+docs/                           @Orandifelix
+README.md                       @Orandifelix
+CHANGELOG.md                    @Orandifelix
+
+# ── CI/CD — Stephen reviews all workflow changes ──────────────
+.github/                        @S-Mwaura
+
+# ── Data — Angela reviews dataset changes ─────────────────────
+datasets/                       @MoonwaMasaki
+
+# ── Reports and presentations ─────────────────────────────────
+reports/                        @Orandifelix
+presentations/                  @Orandifelix
+submission/                     @Orandifelix
