@@ -1,0 +1,57 @@
+{
+    "model_name": "XGBoostClassifier",
+    "version": "1.0.0",
+    "trained_date": null,
+    "dataset": "diabetes.csv",
+    "n_samples": null,
+    "n_train_samples": null,
+    "n_test_samples": null,
+    "n_features": 8,
+    "feature_names": [
+      "Pregnancies",
+      "Glucose",
+      "BloodPressure",
+      "SkinThickness",
+      "Insulin",
+      "BMI",
+      "DiabetesPedigreeFunction",
+      "Age"
+    ],
+    "target": "Outcome",
+    "classes": [0, 1],
+    "class_labels": {
+      "0": "Non-Diabetic",
+      "1": "Diabetic"
+    },
+    "preprocessing": {
+      "imputer": "SimpleImputer(strategy=median)",
+      "scaler": "StandardScaler",
+      "imbalance_handling": "SMOTE"
+    },
+    "hyperparameters": {
+      "n_estimators": null,
+      "max_depth": null,
+      "learning_rate": null,
+      "subsample": null,
+      "colsample_bytree": null,
+      "min_child_weight": null,
+      "reg_alpha": null,
+      "reg_lambda": null,
+      "random_state": 42
+    },
+    "metrics": {
+      "accuracy": null,
+      "precision": null,
+      "recall": null,
+      "f1_score": null,
+      "roc_auc": null,
+      "cv_mean_f1": null,
+      "cv_std_f1": null
+    },
+    "artifacts": {
+      "model": "models/final_model.joblib",
+      "preprocessor": "models/preprocessor.joblib",
+      "metadata": "models/metadata.json"
+    },
+    "notes": "Populate all null fields after model training is complete in notebooks/diabetes_prediction.ipynb"
+  }
