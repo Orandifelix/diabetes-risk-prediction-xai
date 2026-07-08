@@ -1,0 +1,52 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background:        210 40% 98%;
+    --foreground:        222 47% 6%;
+    --card:              0 0% 100%;
+    --card-foreground:   222 47% 6%;
+    --border:            214 32% 91%;
+    --input:             214 32% 91%;
+    --ring:             199 89% 48%;
+    --muted:             210 40% 96%;
+    --muted-foreground:  215 16% 47%;
+    --accent:            210 40% 96%;
+    --accent-foreground: 222 47% 6%;
+    --radius:            0.625rem;
+  }
+
+  .dark {
+    --background:        222 47% 7%;
+    --foreground:        210 40% 98%;
+    --card:              222 47% 10%;
+    --card-foreground:   210 40% 98%;
+    --border:            217 33% 17%;
+    --input:             217 33% 17%;
+    --ring:              199 89% 48%;
+    --muted:             217 33% 17%;
+    --muted-foreground:  215 20% 65%;
+    --accent:            217 33% 17%;
+    --accent-foreground: 210 40% 98%;
+  }
+}
+
+@layer base {
+  * { @apply border-border; }
+  body { @apply bg-background text-foreground; }
+  h1, h2, h3 { @apply font-display tracking-tight; }
+}
+
+@layer utilities {
+  .text-balance { text-wrap: balance; }
+  .scrollbar-hide::-webkit-scrollbar { display: none; }
+  .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+}
+
+/* Risk gauge SVG animation */
+.risk-gauge-path {
+  stroke-dasharray: 251;
+  animation: gauge-sweep 1.2s ease-out forwards;
+}
