@@ -178,5 +178,4 @@ out/
 *.seed
 *.pid.lock
 .hypothesis/
-.benchmarks/datasets/raw/CDC_LLCP2023.XPT
-datasets/raw/CDC_LLCP2023.XPT
+.benchmarks/datasets/raw/*.XPT
