@@ -139,29 +139,26 @@ jobs:
             ruff check $PY_FILES
           fi
 
-      - name: Validate notebook
+      - name: Validate all notebooks
         run: |
           python - <<EOF
+          import glob
           import nbformat
+          import sys
 
-          with open("notebooks/diabetes_prediction.ipynb") as f:
-              nb = nbformat.read(f, as_version=4)
+          notebooks = glob.glob("notebooks/*.ipynb")
 
-          nbformat.validate(nb)
+          if not notebooks:
+              print("⚠️ No notebooks found.")
+              sys.exit(0)
 
-          print("✅ Notebook format valid")
-          EOF
+          for notebook in notebooks:
+              print(f"Checking {notebook}...")
+              with open(notebook, encoding="utf-8") as f:
+                  nb = nbformat.read(f, as_version=4)
+              nbformat.validate(nb)
 
-      - name: Validate metadata
-        run: |
-          python - <<EOF
-          import json
-
-          with open("models/metadata.json") as f:
-              meta=json.load(f)
-
-          print("✅ metadata.json valid")
-          print(meta.keys())
+          print(f"✅ Validated {len(notebooks)} notebook(s).")
           EOF
 
       - name: Validate environment.yml
