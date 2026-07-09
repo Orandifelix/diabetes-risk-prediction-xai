@@ -57,6 +57,7 @@ async def global_feature_importance():
     try:
         import json
         from app.config import settings
+
         with open(settings.METADATA_PATH) as f:
             meta = json.load(f)
         return {"global_importance": meta.get("global_shap", {})}

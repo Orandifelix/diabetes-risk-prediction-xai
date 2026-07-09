@@ -35,7 +35,7 @@ async def google_auth(request: GoogleAuthRequest, db: AsyncSession = Depends(get
     except ValueError as e:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail=f"Invalid Google token: {str(e)}"
+            detail=f"Invalid Google token: {str(e)}",
         )
 
     google_id = idinfo["sub"]

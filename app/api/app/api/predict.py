@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.database import get_db
-from app.dependencies import get_current_user, get_optional_user
+from app.dependencies import get_optional_user
 from app.models.user import User
 from app.models.prediction import Prediction
 from app.schemas.prediction import PredictionInput, PredictionResponse
@@ -24,7 +24,9 @@ async def predict_single(
     Authenticated users get predictions saved to history.
     """
     if not inference_service.is_loaded():
-        raise HTTPException(status_code=503, detail="Model not loaded. Try again shortly.")
+        raise HTTPException(
+            status_code=503, detail="Model not loaded. Try again shortly."
+        )
 
     # Build feature dict using raw names
     features = {

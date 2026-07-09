@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, func, desc
+from sqlalchemy import select, desc
 from typing import List, Optional
 from app.database import get_db
 from app.dependencies import get_current_user
@@ -17,7 +17,9 @@ async def get_prediction_history(
     page: int = Query(1, ge=1),
     limit: int = Query(20, ge=1, le=100),
     method: Optional[str] = Query(None, description="Filter by: single, batch"),
-    risk_level: Optional[str] = Query(None, description="Filter by: High Risk, Moderate Risk, Low Risk"),
+    risk_level: Optional[str] = Query(
+        None, description="Filter by: High Risk, Moderate Risk, Low Risk"
+    ),
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):

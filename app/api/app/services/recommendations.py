@@ -85,7 +85,9 @@ DISCLAIMER = (
 )
 
 
-def get_recommendation(top_feature: str, probability: float, features: Dict[str, Any]) -> str:
+def get_recommendation(
+    top_feature: str, probability: float, features: Dict[str, Any]
+) -> str:
     """
     Returns a personalised recommendation based on:
     - Top SHAP-contributing feature

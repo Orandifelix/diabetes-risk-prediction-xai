@@ -20,6 +20,7 @@ class ExplainabilityService:
         Frontend maps using FEATURE_LABELS — never exposes raw names to users.
         """
         from app.services.inference import inference_service
+
         df = inference_service._to_dataframe(features)
         explainer = self._get_explainer()
         shap_values = explainer.shap_values(df)
@@ -30,17 +31,12 @@ class ExplainabilityService:
         else:
             values = shap_values[0]
 
-        return {
-            col: round(float(val), 6)
-            for col, val in zip(FEATURE_COLUMNS, values)
-        }
+        return {col: round(float(val), 6) for col, val in zip(FEATURE_COLUMNS, values)}
 
     def get_shap_labels(self, shap_values: Dict[str, float]) -> Dict[str, float]:
         """Return same values keyed by human-readable labels."""
         return {
-            FEATURE_LABELS[k]: v
-            for k, v in shap_values.items()
-            if k in FEATURE_LABELS
+            FEATURE_LABELS[k]: v for k, v in shap_values.items() if k in FEATURE_LABELS
         }
 
     def get_top_feature(self, shap_values: Dict[str, float]) -> tuple:
@@ -48,7 +44,9 @@ class ExplainabilityService:
         top_raw = max(shap_values, key=lambda k: abs(shap_values[k]))
         return top_raw, FEATURE_LABELS.get(top_raw, top_raw)
 
-    def get_global_shap(self, df: pd.DataFrame, sample_size: int = 200) -> Dict[str, float]:
+    def get_global_shap(
+        self, df: pd.DataFrame, sample_size: int = 200
+    ) -> Dict[str, float]:
         """
         Global feature importance from mean absolute SHAP values.
         Samples for performance on large batches.
@@ -68,13 +66,16 @@ class ExplainabilityService:
             for col, val in zip(FEATURE_COLUMNS, mean_abs)
         }
 
-    def get_lime_explanation(self, features: Dict[str, Any], training_data: Optional[np.ndarray] = None) -> List[Dict]:
+    def get_lime_explanation(
+        self, features: Dict[str, Any], training_data: Optional[np.ndarray] = None
+    ) -> List[Dict]:
         """
         LIME local explanation for a single prediction.
         Returns sorted list of {feature, label, weight, direction}.
         """
         try:
             from lime.lime_tabular import LimeTabularExplainer
+
             df = inference_service._to_dataframe(features)
 
             if training_data is None:
@@ -103,15 +104,19 @@ class ExplainabilityService:
                         raw_name = col
                         break
                 label = FEATURE_LABELS.get(raw_name, feature) if raw_name else feature
-                results.append({
-                    "feature": feature,
-                    "label": label,
-                    "weight": round(float(weight), 6),
-                    "direction": "increases risk" if weight > 0 else "decreases risk",
-                })
+                results.append(
+                    {
+                        "feature": feature,
+                        "label": label,
+                        "weight": round(float(weight), 6),
+                        "direction": "increases risk"
+                        if weight > 0
+                        else "decreases risk",
+                    }
+                )
 
             return sorted(results, key=lambda x: abs(x["weight"]), reverse=True)
-        except Exception as e:
+        except Exception:
             return []
 
 

@@ -5,10 +5,20 @@ from typing import Tuple, List
 from fastapi import HTTPException
 
 REQUIRED_COLUMNS = [
-    "_BMI5", "_AGE80", "SEXVAR", "_IMPRACE",
-    "GENHLTH", "PHYSHLTH", "SMOKE100", "_TOTINDA",
-    "EDUCA", "INCOME3", "_RFHYPE6", "_RFCHOL3",
-    "CHCKDNY2", "_MICHD"
+    "_BMI5",
+    "_AGE80",
+    "SEXVAR",
+    "_IMPRACE",
+    "GENHLTH",
+    "PHYSHLTH",
+    "SMOKE100",
+    "_TOTINDA",
+    "EDUCA",
+    "INCOME3",
+    "_RFHYPE6",
+    "_RFCHOL3",
+    "CHCKDNY2",
+    "_MICHD",
 ]
 
 MAX_ROWS = 10000
@@ -25,7 +35,9 @@ def validate_and_parse_csv(contents: bytes) -> Tuple[pd.DataFrame, List[str]]:
     try:
         df = pd.read_csv(BytesIO(contents))
     except Exception as e:
-        raise HTTPException(status_code=400, detail=f"Could not parse CSV file: {str(e)}")
+        raise HTTPException(
+            status_code=400, detail=f"Could not parse CSV file: {str(e)}"
+        )
 
     # Check row count
     if len(df) == 0:
@@ -33,7 +45,7 @@ def validate_and_parse_csv(contents: bytes) -> Tuple[pd.DataFrame, List[str]]:
     if len(df) > MAX_ROWS:
         raise HTTPException(
             status_code=400,
-            detail=f"CSV exceeds maximum of {MAX_ROWS} rows. Your file has {len(df)} rows."
+            detail=f"CSV exceeds maximum of {MAX_ROWS} rows. Your file has {len(df)} rows.",
         )
 
     # Check columns
@@ -44,7 +56,7 @@ def validate_and_parse_csv(contents: bytes) -> Tuple[pd.DataFrame, List[str]]:
         raise HTTPException(
             status_code=400,
             detail=f"Missing required columns: {', '.join(missing)}. "
-                   f"Download the sample CSV to see the correct format."
+            f"Download the sample CSV to see the correct format.",
         )
 
     if extra:
@@ -58,7 +70,7 @@ def validate_and_parse_csv(contents: bytes) -> Tuple[pd.DataFrame, List[str]]:
     cols_with_nulls = null_counts[null_counts > 0]
     if not cols_with_nulls.empty:
         errors.append(
-            f"Null values found and will be handled: "
+            "Null values found and will be handled: "
             + ", ".join([f"{col} ({n})" for col, n in cols_with_nulls.items()])
         )
         df = df.fillna(df.median())
@@ -69,8 +81,7 @@ def validate_and_parse_csv(contents: bytes) -> Tuple[pd.DataFrame, List[str]]:
             df[col] = pd.to_numeric(df[col])
         except Exception:
             raise HTTPException(
-                status_code=400,
-                detail=f"Column '{col}' contains non-numeric values."
+                status_code=400, detail=f"Column '{col}' contains non-numeric values."
             )
 
     return df, errors
@@ -102,9 +113,7 @@ def build_results_dataframe(
     if shap_values_list and shap_values_list[0]:
         for col in FEATURE_COLUMNS:
             label = FEATURE_LABELS[col]
-            results[f"shap_{label}"] = [
-                sv.get(col, None) for sv in shap_values_list
-            ]
+            results[f"shap_{label}"] = [sv.get(col, None) for sv in shap_values_list]
 
     # Sort by probability descending
     results = results.sort_values("probability", ascending=False).reset_index(drop=True)

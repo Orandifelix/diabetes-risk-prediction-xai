@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String, Float, Integer, DateTime, ForeignKey, JSON, Enum
+from sqlalchemy import Column, String, Float, Integer, DateTime, ForeignKey, JSON
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 import enum
@@ -55,4 +55,6 @@ class BatchJob(Base):
     completed_at = Column(DateTime(timezone=True), nullable=True)
 
     user = relationship("User", back_populates="batch_jobs")
-    predictions = relationship("Prediction", back_populates="batch_job", cascade="all, delete-orphan")
+    predictions = relationship(
+        "Prediction", back_populates="batch_job", cascade="all, delete-orphan"
+    )

@@ -36,12 +36,14 @@ def compute_batch_analytics(
             group_high = sum(
                 1 for i, m in enumerate(mask) if m and risk_levels[i] == "High Risk"
             )
-            risk_by_age.append({
-                "age_group": label,
-                "count": int(mask.sum()),
-                "high_risk_count": group_high,
-                "avg_probability": round(float(group_probs.mean()), 4),
-            })
+            risk_by_age.append(
+                {
+                    "age_group": label,
+                    "count": int(mask.sum()),
+                    "high_risk_count": group_high,
+                    "avg_probability": round(float(group_probs.mean()), 4),
+                }
+            )
 
     # Risk by BMI range
     bmi_bins = {
@@ -55,11 +57,13 @@ def compute_batch_analytics(
         mask = df["_BMI5"].between(bmi_low, bmi_high)
         group_probs = probabilities[mask]
         if len(group_probs) > 0:
-            risk_by_bmi.append({
-                "bmi_range": label,
-                "count": int(mask.sum()),
-                "avg_probability": round(float(group_probs.mean()), 4),
-            })
+            risk_by_bmi.append(
+                {
+                    "bmi_range": label,
+                    "count": int(mask.sum()),
+                    "avg_probability": round(float(group_probs.mean()), 4),
+                }
+            )
 
     # Top risk factors from global SHAP
     top_factors = sorted(

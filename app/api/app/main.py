@@ -4,7 +4,16 @@ from contextlib import asynccontextmanager
 from app.config import settings
 from app.database import engine, Base
 from app.services.inference import inference_service
-from app.api import auth, predict, batch, history, analytics, export, health, explainability
+from app.api import (
+    auth,
+    predict,
+    batch,
+    history,
+    analytics,
+    export,
+    health,
+    explainability,
+)
 
 
 @asynccontextmanager

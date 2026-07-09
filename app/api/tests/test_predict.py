@@ -2,20 +2,20 @@ import pytest
 from httpx import AsyncClient
 
 VALID_INPUT = {
-    "_BMI5":    28.5,
-    "_AGE80":   7,
-    "SEXVAR":   1,
+    "_BMI5": 28.5,
+    "_AGE80": 7,
+    "SEXVAR": 1,
     "_IMPRACE": 1,
-    "GENHLTH":  3,
+    "GENHLTH": 3,
     "PHYSHLTH": 5,
     "SMOKE100": 2,
     "_TOTINDA": 1,
-    "EDUCA":    5,
-    "INCOME3":  7,
+    "EDUCA": 5,
+    "INCOME3": 7,
     "_RFHYPE6": 1,
     "_RFCHOL3": 1,
     "CHCKDNY2": 2,
-    "_MICHD":   0,
+    "_MICHD": 0,
 }
 
 

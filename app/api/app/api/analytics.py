@@ -5,11 +5,6 @@ from app.database import get_db
 from app.dependencies import get_current_user
 from app.models.user import User
 from app.models.prediction import Prediction, BatchJob
-from app.schemas.batch import BatchAnalytics
-from app.services.analytics import compute_batch_analytics
-from app.services.inference import FEATURE_LABELS
-from app.services.explainability import explainability_service
-import pandas as pd
 
 router = APIRouter(prefix="/analytics", tags=["Analytics"])
 
@@ -69,7 +64,9 @@ async def get_batch_analytics(
 ):
     """Full analytics for a batch job dashboard display."""
     job_result = await db.execute(
-        select(BatchJob).where(BatchJob.id == job_id, BatchJob.user_id == current_user.id)
+        select(BatchJob).where(
+            BatchJob.id == job_id, BatchJob.user_id == current_user.id
+        )
     )
     job = job_result.scalar_one_or_none()
     if not job:
@@ -82,16 +79,26 @@ async def get_batch_analytics(
         "high_risk_count": job.high_risk_count,
         "moderate_risk_count": job.moderate_risk_count,
         "low_risk_count": job.low_risk_count,
-        "high_risk_pct": round(job.high_risk_count / job.total_rows * 100, 1) if job.total_rows else 0,
-        "moderate_risk_pct": round(job.moderate_risk_count / job.total_rows * 100, 1) if job.total_rows else 0,
-        "low_risk_pct": round(job.low_risk_count / job.total_rows * 100, 1) if job.total_rows else 0,
+        "high_risk_pct": round(job.high_risk_count / job.total_rows * 100, 1)
+        if job.total_rows
+        else 0,
+        "moderate_risk_pct": round(job.moderate_risk_count / job.total_rows * 100, 1)
+        if job.total_rows
+        else 0,
+        "low_risk_pct": round(job.low_risk_count / job.total_rows * 100, 1)
+        if job.total_rows
+        else 0,
         "avg_probability": job.avg_probability,
         "median_probability": job.median_probability,
         "std_probability": job.std_probability,
         "global_shap": job.global_shap,
         "top_risk_factors": sorted(
-            [{"feature": k, "importance": v} for k, v in (job.global_shap or {}).items()],
-            key=lambda x: x["importance"], reverse=True
+            [
+                {"feature": k, "importance": v}
+                for k, v in (job.global_shap or {}).items()
+            ],
+            key=lambda x: x["importance"],
+            reverse=True,
         )[:5],
         "created_at": job.created_at.isoformat(),
         "completed_at": job.completed_at.isoformat() if job.completed_at else None,

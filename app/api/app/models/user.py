@@ -15,5 +15,9 @@ class User(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     last_login = Column(DateTime(timezone=True), onupdate=func.now())
 
-    predictions = relationship("Prediction", back_populates="user", cascade="all, delete-orphan")
-    batch_jobs = relationship("BatchJob", back_populates="user", cascade="all, delete-orphan")
+    predictions = relationship(
+        "Prediction", back_populates="user", cascade="all, delete-orphan"
+    )
+    batch_jobs = relationship(
+        "BatchJob", back_populates="user", cascade="all, delete-orphan"
+    )

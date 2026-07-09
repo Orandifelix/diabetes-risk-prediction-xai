@@ -2,15 +2,24 @@ import joblib
 import numpy as np
 import pandas as pd
 from typing import Dict, Any, Tuple
-from pathlib import Path
 from app.config import settings
 
 
 FEATURE_COLUMNS = [
-    "_BMI5", "_AGE80", "SEXVAR", "_IMPRACE",
-    "GENHLTH", "PHYSHLTH", "SMOKE100", "_TOTINDA",
-    "EDUCA", "INCOME3", "_RFHYPE6", "_RFCHOL3",
-    "CHCKDNY2", "_MICHD"
+    "_BMI5",
+    "_AGE80",
+    "SEXVAR",
+    "_IMPRACE",
+    "GENHLTH",
+    "PHYSHLTH",
+    "SMOKE100",
+    "_TOTINDA",
+    "EDUCA",
+    "INCOME3",
+    "_RFHYPE6",
+    "_RFCHOL3",
+    "CHCKDNY2",
+    "_MICHD",
 ]
 
 FEATURE_LABELS = {
@@ -48,6 +57,7 @@ class InferenceService:
             except FileNotFoundError:
                 self.preprocessor = None  # Pipeline handles it
             import json
+
             with open(settings.METADATA_PATH) as f:
                 self.metadata = json.load(f)
             self._loaded = True
@@ -81,9 +91,10 @@ class InferenceService:
         """Return (prediction, probability)."""
         df = self._to_dataframe(features)
         prob = float(self.model.predict_proba(df)[0][1])
-        pred = int(prob >= settings.HIGH_RISK_THRESHOLD or (
-            prob >= settings.MODERATE_RISK_THRESHOLD
-        ))
+        pred = int(
+            prob >= settings.HIGH_RISK_THRESHOLD
+            or (prob >= settings.MODERATE_RISK_THRESHOLD)
+        )
         # Use model's own threshold
         pred = int(self.model.predict(df)[0])
         return pred, round(prob, 4)

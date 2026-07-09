@@ -7,12 +7,11 @@ from app.dependencies import get_current_user
 from app.models.user import User
 from app.models.prediction import Prediction, BatchJob
 from app.schemas.batch import BatchJobResponse
-from app.services.inference import inference_service, FEATURE_LABELS
+from app.services.inference import inference_service
 from app.services.explainability import explainability_service
 from app.services.recommendations import get_recommendation
-from app.services.csv_processor import validate_and_parse_csv, build_results_dataframe
+from app.services.csv_processor import validate_and_parse_csv
 from app.services.analytics import compute_batch_analytics
-import json
 
 router = APIRouter(prefix="/predict", tags=["Batch Prediction"])
 
@@ -58,7 +57,9 @@ async def predict_batch(
 
         shap_list.append(shap_vals)
         top_risk_factors.append(top_label)
-        recommendations.append(get_recommendation(top_raw, float(probabilities[i]), features))
+        recommendations.append(
+            get_recommendation(top_raw, float(probabilities[i]), features)
+        )
 
     # Global SHAP
     try:

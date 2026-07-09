@@ -8,7 +8,10 @@ from app.database import get_db
 from app.dependencies import get_current_user
 from app.models.user import User
 from app.models.prediction import Prediction, BatchJob
-from app.services.pdf_generator import generate_single_report, generate_batch_summary_report
+from app.services.pdf_generator import (
+    generate_single_report,
+    generate_batch_summary_report,
+)
 from app.services.inference import FEATURE_LABELS
 
 router = APIRouter(prefix="/export", tags=["Export"])
@@ -34,11 +37,15 @@ async def export_batch_csv(
     Sorted by probability descending — highest risk first.
     """
     if risk_filter not in RISK_FILTERS:
-        raise HTTPException(status_code=400, detail="Invalid risk filter. Use: high, moderate, low, all")
+        raise HTTPException(
+            status_code=400, detail="Invalid risk filter. Use: high, moderate, low, all"
+        )
 
     # Verify job ownership
     job_result = await db.execute(
-        select(BatchJob).where(BatchJob.id == job_id, BatchJob.user_id == current_user.id)
+        select(BatchJob).where(
+            BatchJob.id == job_id, BatchJob.user_id == current_user.id
+        )
     )
     job = job_result.scalar_one_or_none()
     if not job:
@@ -54,7 +61,9 @@ async def export_batch_csv(
     predictions = result.scalars().all()
 
     if not predictions:
-        raise HTTPException(status_code=404, detail=f"No {risk_filter} risk patients found.")
+        raise HTTPException(
+            status_code=404, detail=f"No {risk_filter} risk patients found."
+        )
 
     # Build DataFrame
     rows = []
@@ -137,7 +146,9 @@ async def export_batch_summary_pdf(
 ):
     """Download executive summary PDF for a batch job."""
     job_result = await db.execute(
-        select(BatchJob).where(BatchJob.id == job_id, BatchJob.user_id == current_user.id)
+        select(BatchJob).where(
+            BatchJob.id == job_id, BatchJob.user_id == current_user.id
+        )
     )
     job = job_result.scalar_one_or_none()
     if not job:
@@ -148,16 +159,26 @@ async def export_batch_summary_pdf(
         "high_risk_count": job.high_risk_count,
         "moderate_risk_count": job.moderate_risk_count,
         "low_risk_count": job.low_risk_count,
-        "high_risk_pct": round(job.high_risk_count / job.total_rows * 100, 1) if job.total_rows else 0,
-        "moderate_risk_pct": round(job.moderate_risk_count / job.total_rows * 100, 1) if job.total_rows else 0,
-        "low_risk_pct": round(job.low_risk_count / job.total_rows * 100, 1) if job.total_rows else 0,
+        "high_risk_pct": round(job.high_risk_count / job.total_rows * 100, 1)
+        if job.total_rows
+        else 0,
+        "moderate_risk_pct": round(job.moderate_risk_count / job.total_rows * 100, 1)
+        if job.total_rows
+        else 0,
+        "low_risk_pct": round(job.low_risk_count / job.total_rows * 100, 1)
+        if job.total_rows
+        else 0,
         "avg_probability": job.avg_probability or 0,
         "median_probability": job.median_probability or 0,
         "std_probability": job.std_probability or 0,
         "global_shap": job.global_shap or {},
         "top_risk_factors": sorted(
-            [{"feature": k, "importance": v} for k, v in (job.global_shap or {}).items()],
-            key=lambda x: x["importance"], reverse=True
+            [
+                {"feature": k, "importance": v}
+                for k, v in (job.global_shap or {}).items()
+            ],
+            key=lambda x: x["importance"],
+            reverse=True,
         )[:5],
     }
 
