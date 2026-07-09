@@ -178,4 +178,4 @@ out/
 *.seed
 *.pid.lock
 .hypothesis/
-.benchmarks/
+.benchmarks/datasets/raw/*.XPT
