@@ -284,9 +284,9 @@ diabetes-risk-prediction-xai/
 <a id="repository-navigation"></a>
 ## 🗺️ Repository Navigation
 
-- 📓 [Final Notebook](notebooks/diabetes_prediction.ipynb)
+- 📓 [Final Notebook](notebooks/T2DM.ipynb)
 - 🎞 [Presentation](presentations/presentation.pdf)
-- 🌐 [Live Application](#) *(Deployment link if available)*
+- 🌐 [Live Application](#https://diabetes-risk-prediction-xai-delta.vercel.app/)
 - ⚙ [Backend API](app/api/main.py) *(FastAPI)*
 - 🖥 [Frontend Dashboard](app/web) *(Next.js)*
 - 📄 [Final Report](reports/final_report.pdf)
