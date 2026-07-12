@@ -92,10 +92,11 @@ The target variable is imbalanced: ~85.7% non‑diabetic, ~14.3% diabetic, refle
 
 ![Class Distribution](images/02_eda/class_distribution.png)
 
-#### Correlation Heatmap
-Hypertension, general health, age, BMI, and high cholesterol show the strongest positive correlations with diabetes.
+#### Feature Correlation with Diabetes
 
-![Correlation Heatmap](images/02_eda/correlation_heatmap.png)
+To better understand the linear relationships between predictor variables and the target, Pearson correlation coefficients were computed and ranked by magnitude. Hypertension, general health, age, BMI, and high cholesterol demonstrate the strongest positive correlations with diabetes, supporting their inclusion as key predictive features.
+
+![Feature Correlation Ranking](images/02_eda/correlation_with_diabetes.png)
 
 #### Missing Values
 Missingness is concentrated in income, high cholesterol, BMI, and smoking status, which were handled via imputation.
@@ -153,13 +154,38 @@ The best‑performing model, **XGBoost**, was further tuned using `GridSearchCV`
 - **Accuracy:** 0.720
 
 ### Confusion Matrix
-![Confusion Matrix](images/05_evaluation/confusion_matrix.png)
+
+<p align="center">
+  <img src="images/05_evaluation/confusion_matrix.png"
+       alt="Confusion Matrix"
+       width="650">
+</p>
+
+The confusion matrix shows that the model correctly identifies the majority of non-diabetic individuals while maintaining strong sensitivity for diabetic cases, making it suitable as a screening tool.
+
+---
 
 ### ROC Curve
-![ROC Curve](images/05_evaluation/roc_curve.png)
 
-### Model Comparison
-![Model Comparison](images/04_modeling/comparison_models.png)
+<p align="center">
+  <img src="images/04_modeling/xgboost_roc_curve.png"
+       alt="ROC Curve"
+       width="650">
+</p>
+
+The XGBoost model achieved a ROC-AUC of **0.829**, demonstrating good discrimination between diabetic and non-diabetic individuals.
+
+---
+
+### Model Performance Comparison
+
+<p align="center">
+  <img src="images/04_modeling/comparison_models.png"
+       alt="Model Comparison"
+       width="750">
+</p>
+
+XGBoost achieved the highest overall performance, balancing recall and ROC-AUC while maintaining competitive precision and F1-score.
 
 ---
 
@@ -173,16 +199,40 @@ To build trust and facilitate clinical adoption, we employed two complementary X
 ### Global Feature Importance (SHAP)
 SHAP summary plots reveal that hypertension, general health, age, BMI, and high cholesterol are the most influential predictors across the entire dataset.
 
-![SHAP Summary](images/06_interpretability/shap_summary_tuned_xgb.png)
+<p align="center">
+  <img src="images/06_interpretability/shap_summary_tuned_xgb.png"
+       alt="SHAP Summary Plot"
+       width="900">
+</p>
+
+The visualization confirms that clinical risk factors such as hypertension, elevated BMI, increasing age, poor general health, and high cholesterol consistently drive model predictions, aligning with established medical knowledge and increasing confidence in the model's interpretability.
 
 ### Local Explanations
 For any individual prediction, SHAP force plots and LIME explanations show which features pushed the prediction toward diabetes or away from it. This allows clinicians to understand the specific risk factors for each patient.
 
-#### SHAP Force Plot (Example)
-![SHAP Force](images/06_interpretability/shap_force.png)
+### Local Prediction Explanation (SHAP Waterfall)
 
-#### LIME Explanation (Example)
-![LIME](images/06_interpretability/lime_explanation.png)
+The SHAP waterfall plot explains how the model arrived at an individual prediction by showing how each feature contributes to moving the prediction from the average (baseline) risk toward the final diabetes risk score. Features pushing the prediction higher are shown in red, while those lowering the predicted risk are shown in blue.
+
+<p align="center">
+  <img src="images/06_interpretability/shap_waterfall_high_risk.png"
+       alt="SHAP Waterfall Plot"
+       width="850">
+</p>
+
+For this high-risk individual, hypertension, elevated BMI, increasing age, and poor general health were among the strongest contributors driving the prediction toward diabetes.
+
+### Local Prediction Explanation (LIME)
+
+LIME provides a local explanation by approximating the model with an interpretable surrogate model around a single prediction. The visualization highlights the features that most strongly increased or decreased the predicted probability of diabetes for this individual.
+
+<p align="center">
+  <img src="images/06_interpretability/lime_high_risk.png"
+       alt="LIME Local Explanation"
+       width="850">
+</p>
+
+LIME complements SHAP by offering an intuitive explanation of the model's reasoning for an individual patient, enabling clinicians to understand which risk factors most influenced the prediction.
 
 ### Business Value of XAI
 - **Clinical Trust:** Explainable predictions are more likely to be accepted by healthcare providers.
@@ -345,17 +395,43 @@ The dashboard will be available at `http://localhost:3000`.
 
 ---
 
-## 📊 Results in Action
+## 📊 Model Results & Application
 
-### Dashboard Screenshot
-![Dashboard Screenshot](https://images/07_dashboard/dashboard.png)
+This section showcases the deployed application together with the key visualizations that demonstrate the model's performance and interpretability.
+
+### Interactive Dashboard
+
+The web application enables users to assess diabetes risk in real time while providing explainable AI insights for each prediction.
+
+<p align="center">
+  <img src="images/07_dashboard/dashboard.png"
+       alt="Diabetes Risk Prediction Dashboard"
+       width="1000">
+</p>
+
+---
 
 ### SHAP Global Feature Importance
-![SHAP Global Feature Importance](https://images/06_interpretability/shap_summary.png)
 
-### ROC Curve & Decision Threshold Optimization
-![ROC Curve & Decision Threshold Optimization](https://images/05_evaluation/roc_curve.png)
+The SHAP summary plot highlights the features that have the greatest overall influence on diabetes risk predictions across the entire dataset.
 
+<p align="center">
+  <img src="images/06_interpretability/shap_summary_tuned_xgb.png"
+       alt="SHAP Global Feature Importance"
+       width="900">
+</p>
+
+---
+
+### ROC Curve
+
+The Receiver Operating Characteristic (ROC) curve demonstrates the model's ability to distinguish between diabetic and non-diabetic individuals. The XGBoost model achieved an ROC-AUC of **0.829**, indicating strong discriminative performance.
+
+<p align="center">
+  <img src="images/04_modeling/xgboost_roc_curve.png"
+       alt="ROC Curve"
+       width="800">
+</p>
 ---
 
 ## 🛠️ Technologies Used
