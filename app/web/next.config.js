@@ -1,3 +1,5 @@
+const path = require('path');
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   images: {
@@ -8,6 +10,11 @@ const nextConfig = {
   },
   env: {
     NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL,
+  },
+  webpack: (config, { isServer }) => {
+    // Alias @/lib to the actual lib folder
+    config.resolve.alias['@/lib'] = path.resolve(__dirname, 'lib');
+    return config;
   },
 };
 
