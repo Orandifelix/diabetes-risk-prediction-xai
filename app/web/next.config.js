@@ -12,9 +12,16 @@ const nextConfig = {
     NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL,
   },
   webpack: (config, { isServer }) => {
-    // Alias @ to the app/web directory – this covers all @/ imports
-    config.resolve.alias['@'] = path.resolve(__dirname);
-    console.log('✅ Webpack alias @ set to', path.resolve(__dirname));
+    // Force alias for @ and @/lib
+    const projectRoot = path.resolve(__dirname);
+    config.resolve.alias['@'] = projectRoot;
+    config.resolve.alias['@/lib'] = path.join(projectRoot, 'lib');
+    
+    // Also add the project root as a module directory (fallback)
+    config.resolve.modules.push(projectRoot);
+    
+    console.log('✅ Webpack alias @ set to', projectRoot);
+    console.log('✅ Webpack alias @/lib set to', path.join(projectRoot, 'lib'));
     return config;
   },
 };
