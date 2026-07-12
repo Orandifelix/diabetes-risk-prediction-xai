@@ -10,23 +10,27 @@ export const authOptions: NextAuthOptions = {
     }),
   ],
   callbacks: {
-    async signIn({ account, profile }) {
+    async signIn({ account }) {
       if (account?.provider === "google" && account.id_token) {
         try {
           const response = await api.post("/auth/google", {
             token: account.id_token,
           });
+    
           account.accessToken = response.data.access_token;
+    
           return true;
-        } catch {
+        } catch (err) {
+          console.error("Backend login failed:", err);
           return false;
         }
       }
+    
       return true;
     },
     async jwt({ token, account }) {
       if (account?.accessToken) {
-        token.accessToken = account.accessToken as string; 
+         token.accessToken = account.accessToken as string; 
       }
       return token;
     },
