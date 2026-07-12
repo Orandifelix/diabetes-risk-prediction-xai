@@ -10,7 +10,11 @@
 [![SHAP](https://img.shields.io/badge/XAI-SHAP%20%7C%20LIME-purple)](https://shap.readthedocs.io/)
 
 
-![Header Image](images/08_presentation/diabetes_risk_assessment.png)
+<p align="center">
+  <img src="images/08_presentation/diabetes_risk_assessment.png"
+       alt="Explainable Diabetes Risk Prediction Dashboard"
+       style="max-width:100%; height:auto;">
+</p>
 
 ---
 
@@ -96,12 +100,16 @@ The target variable is imbalanced: ~85.7% non‑diabetic, ~14.3% diabetic, refle
 
 To better understand the linear relationships between predictor variables and the target, Pearson correlation coefficients were computed and ranked by magnitude. Hypertension, general health, age, BMI, and high cholesterol demonstrate the strongest positive correlations with diabetes, supporting their inclusion as key predictive features.
 
-![Feature Correlation Ranking](images/02_eda/correlation_with_diabetes.png)
+<p align="center">
+  <img src="images/02_eda/correlation_with_diabetes.png"
+       alt="Feature Correlation Ranking"
+       width="650"
+       height="920">
+</p>
 
-#### Missing Values
-Missingness is concentrated in income, high cholesterol, BMI, and smoking status, which were handled via imputation.
-
-![Missing Values](images/03_feature_engineering/missing_values.png)
+<p align="center">
+  <em>Figure 3. Pearson correlation ranking of predictors with diabetes.</em>
+</p>
 
 ---
 
@@ -202,7 +210,12 @@ SHAP summary plots reveal that hypertension, general health, age, BMI, and high 
 <p align="center">
   <img src="images/06_interpretability/shap_summary_tuned_xgb.png"
        alt="SHAP Summary Plot"
-       width="900">
+       width="750"
+       height="900">
+</p>
+
+<p align="center">
+  <em>Figure 8. Global SHAP summary plot showing the overall influence and direction of each feature on diabetes risk predictions across the dataset.</em>
 </p>
 
 The visualization confirms that clinical risk factors such as hypertension, elevated BMI, increasing age, poor general health, and high cholesterol consistently drive model predictions, aligning with established medical knowledge and increasing confidence in the model's interpretability.
@@ -217,7 +230,8 @@ The SHAP waterfall plot explains how the model arrived at an individual predicti
 <p align="center">
   <img src="images/06_interpretability/shap_waterfall_high_risk.png"
        alt="SHAP Waterfall Plot"
-       width="850">
+       width="750"
+       height="900">
 </p>
 
 For this high-risk individual, hypertension, elevated BMI, increasing age, and poor general health were among the strongest contributors driving the prediction toward diabetes.
@@ -229,7 +243,8 @@ LIME provides a local explanation by approximating the model with an interpretab
 <p align="center">
   <img src="images/06_interpretability/lime_high_risk.png"
        alt="LIME Local Explanation"
-       width="850">
+       width="750"
+       height="900">
 </p>
 
 LIME complements SHAP by offering an intuitive explanation of the model's reasoning for an individual patient, enabling clinicians to understand which risk factors most influenced the prediction.
@@ -260,69 +275,23 @@ This project successfully developed an explainable machine learning system for T
 ```text
 diabetes-risk-prediction-xai/
 │
-├── .github/
-│   └── workflows/
-│       └── ci.yml                     # Continuous integration pipeline
-│
-├── datasets/
-│   ├── raw/                           # Original unmodified source data
-│   └── processed/                     # Cleaned and feature-engineered data
-│
-├── docs/
-│   ├── architecture.md                # System design and component overview
-│   ├── dashboard.md                   # Dashboard usage and API reference
-│   └── methodology.md                 # Modelling decisions and rationale
-│
-├── images/
-│   ├── 01_data_understanding/         # Dataset overview figures
-│   ├── 02_eda/                        # EDA plots and distributions
-│   ├── 03_feature_engineering/        # Feature selection and encoding figures
-│   ├── 04_modeling/                   # Training curves and tuning results
-│   ├── 05_evaluation/                 # Confusion matrix, ROC, model comparison
-│   ├── 06_interpretability/           # SHAP and LIME visualizations
-│   ├── 07_dashboard/                  # Dashboard screenshots
-│   └── 08_presentation/               # Header image and slide exports
-│
-├── models/
-│   ├── final_model.joblib             # Trained XGBoost/LightGBM classifier
-│   ├── preprocessor.joblib            # Fitted preprocessing pipeline (Imputation, Scaling)
-│   └── metadata.json                  # Model version, metrics, optimized thresholds
-│
-├── notebooks/
-│   ├── diabetes_prediction.ipynb      # Final notebook — runs end-to-end (SMOTE, Tuning, Thresholds)
-│   └── notebook.pdf                   # Exported PDF version
-│
-├── presentations/
-│   ├── presentation.pptx              # Editable slide deck
-│   ├── presentation.pdf               # PDF export for submission
-│   └── speaker_notes.md               # Presenter notes and talking points
-│
-├── reports/
-│   ├── final_report.pdf               # Comprehensive project report
-│   └── proposal.pdf                   # Approved capstone proposal
-│
-├── submission/
-│   ├── github.pdf                     # GitHub repository PDF snapshot
-│   ├── notebook.pdf                   # Notebook PDF for submission
-│   └── presentation.pdf               # Presentation PDF for submission
-│
-├── app/
-│   ├── api/                           # FastAPI backend (prediction & custom threshold logic)
-│   │   ├── main.py
-│   │   ├── schemas.py
-│   │   └── utils.py
-│   └── web/                           # Next.js frontend dashboard
-│       ├── pages/
-│       ├── components/
-│       └── styles/
-│
-├── .gitignore                         # Excludes data files, envs, caches
-├── CHANGELOG.md                       # Version history and release notes
-├── CONTRIBUTING.md                    # Contribution guide and setup steps
-├── LICENSE                            # MIT License
-├── README.md                          # Project home page
-├── environment.yml                    # Conda environment specification (with LightGBM & Imblearn)
-└── requirements.txt                   # Pip dependency list
+├── .github/               # CI/CD workflows
+├── datasets/              # Raw and processed data
+├── docs/                  # System design and methodology docs
+├── images/                # All visualizations (EDA, modeling, XAI, dashboard)
+├── models/                # Trained model, preprocessor, metadata
+├── notebooks/             # Final Jupyter notebook and PDF export
+├── presentations/         # Slide deck and speaker notes
+├── reports/               # Project report and proposal
+├── submission/            # PDF exports for submission
+├── app/                   # FastAPI backend + Next.js frontend
+├── .gitignore             # Excludes data, envs, caches
+├── CHANGELOG.md           # Version history
+├── CONTRIBUTING.md        # Contribution guide
+├── LICENSE                # MIT License
+├── README.md              # Project home page
+├── environment.yml        # Conda environment
+└── requirements.txt       # Pip dependencies
 
 ---
 ## 🗺️ Repository Navigation
@@ -416,9 +385,10 @@ The web application enables users to assess diabetes risk in real time while pro
 The SHAP summary plot highlights the features that have the greatest overall influence on diabetes risk predictions across the entire dataset.
 
 <p align="center">
-  <img src="images/06_interpretability/shap_summary_tuned_xgb.png"
+  <img src="images/06_interpretability/feature_importance_tuned_xgb.png"
        alt="SHAP Global Feature Importance"
-       width="900">
+       width="750"
+       height="900">
 </p>
 
 ---
@@ -430,7 +400,7 @@ The Receiver Operating Characteristic (ROC) curve demonstrates the model's abili
 <p align="center">
   <img src="images/04_modeling/xgboost_roc_curve.png"
        alt="ROC Curve"
-       width="800">
+       width="600">
 </p>
 ---
 
