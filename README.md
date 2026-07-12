@@ -10,7 +10,7 @@
 [![SHAP](https://img.shields.io/badge/XAI-SHAP%20%7C%20LIME-purple)](https://shap.readthedocs.io/)
 
 
-![Header Image](images/08_presentation/diabetes risk assessment.png)
+![Header Image](images/08_presentation/diabetes_risk_assessment.png)
 
 ---
 
