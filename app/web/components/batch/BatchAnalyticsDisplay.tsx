@@ -39,7 +39,7 @@ export function BatchAnalyticsDisplay({ analytics }: BatchAnalyticsDisplayProps)
         ].map(({ filter, label, count, color }) => (
           <a
             key={filter}
-            href={exportBatchCsv(analytics.job_id, filter as any)}
+            href={exportBatchCsv(analytics.id, filter as any)}
             download
             className={`flex flex-col items-center rounded-xl border p-4 hover:shadow-md transition-all cursor-pointer group`}
           >
@@ -144,7 +144,7 @@ export function BatchAnalyticsDisplay({ analytics }: BatchAnalyticsDisplayProps)
       {/* PDF summary download */}
       <div className="flex justify-end">
         <a
-          href={exportBatchPdf(analytics.job_id)}
+          href={exportBatchPdf(analytics.id)}
           download
           className="flex items-center gap-2 rounded-lg border px-4 py-2 text-sm font-medium hover:bg-muted transition-colors"
         >
