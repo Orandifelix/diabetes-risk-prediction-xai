@@ -1,6 +1,7 @@
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import DeclarativeBase, sessionmaker
 from app.config import settings
+import uuid
 
 # Convert postgresql:// to postgresql+asyncpg://
 DATABASE_URL = settings.DATABASE_URL.replace("postgresql://", "postgresql+asyncpg://")
@@ -11,6 +12,10 @@ engine = create_async_engine(
     pool_pre_ping=True,
     pool_size=10,
     max_overflow=20,
+    connect_args={
+        "statement_cache_size": 0,
+        "prepared_statement_name_func": lambda: f"__asyncpg_{uuid.uuid4().hex}__",
+    },
 )
 
 AsyncSessionLocal = sessionmaker(
@@ -19,10 +24,8 @@ AsyncSessionLocal = sessionmaker(
     expire_on_commit=False,
 )
 
-
 class Base(DeclarativeBase):
     pass
-
 
 async def get_db() -> AsyncSession:
     async with AsyncSessionLocal() as session:
