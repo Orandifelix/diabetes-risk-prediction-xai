@@ -12,8 +12,9 @@ const nextConfig = {
     NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL,
   },
   webpack: (config, { isServer }) => {
-    // Alias @/lib to the actual lib folder
-    config.resolve.alias['@/lib'] = path.resolve(__dirname, 'lib');
+    // Alias @ to the app/web directory – this covers all @/ imports
+    config.resolve.alias['@'] = path.resolve(__dirname);
+    console.log('✅ Webpack alias @ set to', path.resolve(__dirname));
     return config;
   },
 };
