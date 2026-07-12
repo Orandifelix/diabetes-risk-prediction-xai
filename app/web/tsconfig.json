@@ -1,5 +1,6 @@
 {
   "compilerOptions": {
+    "baseUrl": ".",                      // ← essential: resolves paths relative to this config
     "lib": ["dom", "dom.iterable", "esnext"],
     "allowJs": true,
     "skipLibCheck": true,
@@ -8,13 +9,14 @@
     "incremental": true,
     "module": "esnext",
     "esModuleInterop": true,
-    "moduleResolution": "node",
+    "moduleResolution": "bundler",       // ← recommended for Next.js 13+
     "resolveJsonModule": true,
     "isolatedModules": true,
     "jsx": "preserve",
     "plugins": [{ "name": "next" }],
     "paths": {
-      "@/*": ["./*"]
+      "@/*": ["./*"],                   // ← resolves @/ to the project root (app/web)
+      "@/lib/*": ["./lib/*"]             // ← explicit mapping (optional but safe)
     }
   },
   "include": [
