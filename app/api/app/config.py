@@ -24,6 +24,9 @@ class Settings(BaseSettings):
     # Google OAuth
     GOOGLE_CLIENT_ID: str = ""
     GOOGLE_CLIENT_SECRET: str = ""
+    
+    # NVIDIA API Key
+    NVIDIA_API_KEY: str = ""
 
     # CORS
     ALLOWED_ORIGINS: List[str] = [
