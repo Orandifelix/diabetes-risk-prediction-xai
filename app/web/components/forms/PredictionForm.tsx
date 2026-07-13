@@ -4,7 +4,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ChevronRight, ChevronLeft, Loader2, Info } from "lucide-react";
+import { ChevronRight, ChevronLeft, Loader2, Info, Calculator, X } from "lucide-react";
 import {
   AGE_OPTIONS, SEX_OPTIONS, RACE_OPTIONS, GENHEALTH_OPTIONS,
   EDUCATION_OPTIONS, INCOME_OPTIONS, YES_NO_OPTIONS,
@@ -60,6 +60,14 @@ const STEPS = [
   },
 ];
 
+// ── BMI category helper ───────────────────────────────────────
+function bmiCategory(bmi: number): { label: string; className: string } {
+  if (bmi < 18.5) return { label: "Underweight", className: "text-sky-500" };
+  if (bmi < 25)   return { label: "Normal weight", className: "text-emerald-500" };
+  if (bmi < 30)   return { label: "Overweight", className: "text-amber-500" };
+  return { label: "Obese", className: "text-red-500" };
+}
+
 function FieldTooltip({ text }: { text: string }) {
   const [show, setShow] = useState(false);
   return (
@@ -77,6 +85,193 @@ function FieldTooltip({ text }: { text: string }) {
           {text}
         </div>
       )}
+    </div>
+  );
+}
+
+// ── BMI Calculator ────────────────────────────────────────────
+function BMICalculator({ onApply }: { onApply: (bmi: number) => void }) {
+  const [open, setOpen] = useState(false);
+  const [unit, setUnit] = useState<"imperial" | "metric">("imperial");
+  const [heightFt, setHeightFt] = useState("");
+  const [heightIn, setHeightIn] = useState("");
+  const [heightCm, setHeightCm] = useState("");
+  const [weightKg, setWeightKg] = useState("");
+
+  const computeBmi = (): number | null => {
+    let heightM: number;
+    const kg = parseFloat(weightKg);
+    if (!kg) return null;
+
+    if (unit === "imperial") {
+      const ft = parseFloat(heightFt);
+      const inch = parseFloat(heightIn) || 0;
+      const totalInches = (ft || 0) * 12 + inch;
+      if (!totalInches) return null;
+      heightM = totalInches * 0.0254;
+    } else {
+      const cm = parseFloat(heightCm);
+      if (!cm) return null;
+      heightM = cm / 100;
+    }
+
+    if (heightM <= 0) return null;
+    return Math.round((kg / (heightM * heightM)) * 10) / 10;
+  };
+
+  const bmi = computeBmi();
+  const category = bmi ? bmiCategory(bmi) : null;
+
+  const handleApply = () => {
+    if (bmi) {
+      onApply(bmi);
+      setOpen(false);
+    }
+  };
+
+  return (
+    <div className="mt-2">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className="flex items-center gap-1.5 text-xs font-medium text-primary-500 hover:text-primary-600"
+      >
+        <Calculator className="h-3.5 w-3.5" />
+        {open ? "Hide BMI calculator" : "Don't know your BMI? Calculate it"}
+      </button>
+
+      <AnimatePresence>
+        {open && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: "auto" }}
+            exit={{ opacity: 0, height: 0 }}
+            transition={{ duration: 0.2 }}
+            className="overflow-hidden"
+          >
+            <div className="mt-3 rounded-lg border bg-muted/40 p-3">
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex rounded-md border bg-background p-0.5 text-xs">
+                  <button
+                    type="button"
+                    onClick={() => setUnit("imperial")}
+                    className={`rounded px-2 py-1 transition-colors ${
+                      unit === "imperial" ? "bg-primary-500 text-white" : "text-muted-foreground"
+                    }`}
+                  >
+                    ft / kg
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setUnit("metric")}
+                    className={`rounded px-2 py-1 transition-colors ${
+                      unit === "metric" ? "bg-primary-500 text-white" : "text-muted-foreground"
+                    }`}
+                  >
+                    cm / kg
+                  </button>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setOpen(false)}
+                  className="text-muted-foreground hover:text-foreground"
+                >
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              </div>
+
+              {unit === "imperial" ? (
+                <div className="grid grid-cols-3 gap-2">
+                  <div>
+                    <label className="text-xs text-muted-foreground">Height (ft)</label>
+                    <input
+                      type="number"
+                      value={heightFt}
+                      onChange={(e) => setHeightFt(e.target.value)}
+                      min={1}
+                      max={8}
+                      placeholder="5"
+                      className="mt-1 w-full rounded-md border bg-background px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary-400"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs text-muted-foreground">Height (in)</label>
+                    <input
+                      type="number"
+                      value={heightIn}
+                      onChange={(e) => setHeightIn(e.target.value)}
+                      min={0}
+                      max={11}
+                      placeholder="7"
+                      className="mt-1 w-full rounded-md border bg-background px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary-400"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs text-muted-foreground">Weight (kg)</label>
+                    <input
+                      type="number"
+                      value={weightKg}
+                      onChange={(e) => setWeightKg(e.target.value)}
+                      min={20}
+                      max={300}
+                      placeholder="70"
+                      className="mt-1 w-full rounded-md border bg-background px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary-400"
+                    />
+                  </div>
+                </div>
+              ) : (
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="text-xs text-muted-foreground">Height (cm)</label>
+                    <input
+                      type="number"
+                      value={heightCm}
+                      onChange={(e) => setHeightCm(e.target.value)}
+                      min={50}
+                      max={250}
+                      placeholder="170"
+                      className="mt-1 w-full rounded-md border bg-background px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary-400"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs text-muted-foreground">Weight (kg)</label>
+                    <input
+                      type="number"
+                      value={weightKg}
+                      onChange={(e) => setWeightKg(e.target.value)}
+                      min={20}
+                      max={300}
+                      placeholder="70"
+                      className="mt-1 w-full rounded-md border bg-background px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary-400"
+                    />
+                  </div>
+                </div>
+              )}
+
+              <div className="mt-3 flex items-center justify-between">
+                <div className="text-sm">
+                  {bmi ? (
+                    <span>
+                      BMI: <span className="font-semibold">{bmi}</span>{" "}
+                      <span className={category?.className}>({category?.label})</span>
+                    </span>
+                  ) : (
+                    <span className="text-xs text-muted-foreground">Enter height and weight</span>
+                  )}
+                </div>
+                <button
+                  type="button"
+                  onClick={handleApply}
+                  disabled={!bmi}
+                  className="rounded-md bg-primary-500 px-3 py-1.5 text-xs font-medium text-white disabled:opacity-40 hover:bg-primary-600 transition-colors"
+                >
+                  Use this value
+                </button>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
@@ -112,7 +307,7 @@ function SelectField({
 }
 
 function NumberField({
-  label, name, register, error, tooltip, min, max, step, placeholder,
+  label, name, register, error, tooltip, min, max, step, placeholder, extra,
 }: {
   label:       string;
   name:        keyof FormData;
@@ -123,6 +318,7 @@ function NumberField({
   max:         number;
   step?:       number;
   placeholder?: string;
+  extra?:      React.ReactNode;
 }) {
   return (
     <div>
@@ -140,6 +336,7 @@ function NumberField({
         className="w-full rounded-lg border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-400"
       />
       {error && <p className="mt-1 text-xs text-red-500">{error}</p>}
+      {extra}
     </div>
   );
 }
@@ -147,7 +344,7 @@ function NumberField({
 export function PredictionForm({ onSubmit, isLoading }: PredictionFormProps) {
   const [step, setStep] = useState(0);
   const {
-    register, handleSubmit, trigger,
+    register, handleSubmit, trigger, setValue,
     formState: { errors },
   } = useForm<FormData>({ resolver: zodResolver(schema) });
 
@@ -162,9 +359,25 @@ export function PredictionForm({ onSubmit, isLoading }: PredictionFormProps) {
   const renderField = (field: string) => {
     switch (field) {
       case "_BMI5":
-        return <NumberField key={field} label="BMI" name="_BMI5" register={register}
-          error={errors._BMI5?.message} tooltip={FEATURE_TOOLTIPS._BMI5}
-          min={10} max={100} step={0.1} placeholder="e.g. 25.4" />;
+        return (
+          <NumberField
+            key={field}
+            label="BMI"
+            name="_BMI5"
+            register={register}
+            error={errors._BMI5?.message}
+            tooltip={FEATURE_TOOLTIPS._BMI5}
+            min={10}
+            max={100}
+            step={0.1}
+            placeholder="e.g. 25.4"
+            extra={
+              <BMICalculator
+                onApply={(bmi) => setValue("_BMI5", bmi, { shouldValidate: true, shouldDirty: true })}
+              />
+            }
+          />
+        );
       case "_AGE80":
         return <SelectField key={field} label="Age Group" name="_AGE80" register={register}
           options={AGE_OPTIONS} error={errors._AGE80?.message} tooltip={FEATURE_TOOLTIPS._AGE80} />;
@@ -178,7 +391,7 @@ export function PredictionForm({ onSubmit, isLoading }: PredictionFormProps) {
         return <SelectField key={field} label="General Health" name="GENHLTH" register={register}
           options={GENHEALTH_OPTIONS} error={errors.GENHLTH?.message} tooltip={FEATURE_TOOLTIPS.GENHLTH} />;
       case "PHYSHLTH":
-        return <NumberField key={field} label="Poor Physical Health Days (last 30)" name="PHYSHLTH"
+        return <NumberField key={field} label="Good Physical Health Days (last 30)" name="PHYSHLTH"
           register={register} error={errors.PHYSHLTH?.message} tooltip={FEATURE_TOOLTIPS.PHYSHLTH}
           min={0} max={30} step={1} placeholder="0–30" />;
       case "SMOKE100":
