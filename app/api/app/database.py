@@ -1,7 +1,9 @@
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import DeclarativeBase, sessionmaker
 from app.config import settings
+import uuid
 
+# Convert postgresql:// to postgresql+asyncpg://
 DATABASE_URL = settings.DATABASE_URL.replace("postgresql://", "postgresql+asyncpg://")
 
 engine = create_async_engine(
@@ -11,11 +13,8 @@ engine = create_async_engine(
     pool_size=10,
     max_overflow=20,
     connect_args={
-        "statement_cache_size": 0,                # asyncpg >= 0.21
-        "prepared_statement_cache_size": 0,       # older asyncpg versions
-        "server_settings": {
-            "statement_cache_size": "0"           # force server to disable caching
-        }
+        "statement_cache_size": 0,
+        "prepared_statement_name_func": lambda: f"__asyncpg_{uuid.uuid4().hex}__",
     },
 )
 

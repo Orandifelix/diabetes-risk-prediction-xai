@@ -48,11 +48,11 @@ export default function ModelCardPage() {
         {
           title: "Performance",
           rows: [
-            ["Accuracy",             "To be filled after training"],
-            ["F1-Score",             "To be filled after training"],
-            ["ROC-AUC",              "To be filled after training"],
-            ["Precision",            "To be filled after training"],
-            ["Recall",               "To be filled after training"],
+            ["Accuracy",  "0.7208"],
+            ["F1-Score",  "0.4484"],
+            ["ROC-AUC",   "0.8297"],
+            ["Precision", "0.3123"],
+            ["Recall",    "0.7943"],
           ],
         },
         {
