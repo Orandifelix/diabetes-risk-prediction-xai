@@ -1,6 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { Github, FileText } from "lucide-react";
+import PageBackLink from "@/components/pagebacklink/PageBackLink";
 
 const TEAM = [
   { name: "Stephen Mwaura",  github: "S-Mwaura",      role: "Project Lead · Modeling"          },
@@ -22,6 +23,10 @@ const PIPELINE = [
 export default function OurResearchPage() {
   return (
     <div className="mx-auto max-w-5xl px-6 py-14">
+                <PageBackLink
+  href="/research"
+  label="Back to Research"
+/>
       <div className="rounded-2xl border bg-card p-8 mb-12 text-center shadow-sm">
         <h1 className="font-display text-3xl font-bold mb-1">
           Diabetes Risk Prediction Using Machine Learning and Explainable AI

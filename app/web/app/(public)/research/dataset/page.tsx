@@ -1,3 +1,5 @@
+import PageBackLink from "@/components/pagebacklink/PageBackLink";
+
 export default function DatasetPage() {
   const FEATURES = [
     { name: "_BMI5",    label: "BMI",                    type: "Continuous",  desc: "Body mass index (weight/height²)"                              },
@@ -25,6 +27,10 @@ export default function DatasetPage() {
 
   return (
     <div className="mx-auto max-w-4xl px-6 py-14 space-y-8">
+      <PageBackLink
+  href="/research"
+  label="Back to Research"
+/>
       <div>
         <span className="rounded-full bg-primary-100 px-3 py-1 text-xs font-semibold text-primary-700">
           Dataset

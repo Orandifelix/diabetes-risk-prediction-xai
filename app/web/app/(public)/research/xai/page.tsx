@@ -1,6 +1,12 @@
+import PageBackLink from "@/components/pagebacklink/PageBackLink";
+
 export default function XAIPage() {
   return (
     <div className="mx-auto max-w-4xl px-6 py-14 space-y-16">
+                <PageBackLink
+  href="/research"
+  label="Back to Research"
+/>
       <div className="text-center">
         <span className="mb-3 inline-block rounded-full bg-purple-100 px-3 py-1 text-xs font-semibold text-purple-700">
           Explainable AI

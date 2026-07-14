@@ -2,10 +2,15 @@
 import { motion } from "framer-motion";
 import { ExternalLink, BookOpen } from "lucide-react";
 import { RESEARCH_PAPERS } from "@/lib/constants";
+import PageBackLink from "@/components/pagebacklink/PageBackLink";
 
 export default function PriorResearchPage() {
   return (
     <div className="mx-auto max-w-5xl px-6 py-14">
+                <PageBackLink
+  href="/research"
+  label="Back to Research"
+/>
       <div className="text-center mb-12">
         <span className="mb-3 inline-block rounded-full bg-primary-100 px-3 py-1 text-xs font-semibold text-primary-700">
           Literature Review

@@ -1,3 +1,5 @@
+import PageBackLink from "@/components/pagebacklink/PageBackLink";
+
 export default function SymptomsPage() {
   const SYMPTOMS = [
     { emoji: "💧", title: "Increased Thirst",      desc: "Excess glucose pulls fluid from tissues, making you constantly thirsty."                     },
@@ -12,6 +14,10 @@ export default function SymptomsPage() {
 
   return (
     <div className="mx-auto max-w-3xl px-6 py-14">
+      <PageBackLink
+  href="/about"
+  label="Back to About Diabetes"
+/>
       <div className="mb-8">
         <span className="rounded-full bg-red-100 px-3 py-1 text-xs font-semibold text-red-700">
           Symptoms

@@ -1,3 +1,5 @@
+import PageBackLink from "@/components/pagebacklink/PageBackLink";
+
 export default function TypesPage() {
   const TYPES = [
     {
@@ -40,6 +42,10 @@ export default function TypesPage() {
 
   return (
     <div className="mx-auto max-w-3xl px-6 py-14">
+      <PageBackLink
+  href="/about"
+  label="Back to About Diabetes"
+/>
       <div className="mb-8">
         <span className="rounded-full bg-primary-100 px-3 py-1 text-xs font-semibold text-primary-700">
           Types

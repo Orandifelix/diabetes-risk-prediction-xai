@@ -1,6 +1,12 @@
+import PageBackLink from "@/components/pagebacklink/PageBackLink";
+
 export default function ModelCardPage() {
   return (
     <div className="mx-auto max-w-3xl px-6 py-14 space-y-8">
+                <PageBackLink
+  href="/research"
+  label="Back to Research"
+/>
       <div>
         <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700">
           Model Card
@@ -77,6 +83,7 @@ export default function ModelCardPage() {
         },
       ].map((section) => (
         <div key={section.title} className="rounded-xl border bg-card overflow-hidden">
+
           <div className="px-5 py-3 border-b bg-muted/30">
             <h2 className="font-semibold text-sm">{section.title}</h2>
           </div>

@@ -1,3 +1,5 @@
+import PageBackLink from "@/components/pagebacklink/PageBackLink";
+
 export default function PreventionPage() {
   const STRATEGIES = [
     {
@@ -50,6 +52,10 @@ export default function PreventionPage() {
 
   return (
     <div className="mx-auto max-w-3xl px-6 py-14">
+      <PageBackLink
+  href="/about"
+  label="Back to About Diabetes"
+/>
       <div className="mb-8">
         <span className="rounded-full bg-health-100 px-3 py-1 text-xs font-semibold text-health-700">
           Prevention
