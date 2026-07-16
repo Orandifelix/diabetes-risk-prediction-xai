@@ -6,7 +6,7 @@ import { MessageCircle, X, Send, Loader2, Bot, Calculator, ShieldCheck, AlertTri
 import axios from "axios";
 import ReactMarkdown from "react-markdown";
 import { DIDA_FIELDS, looksLikeRiskCheckIntent, bmiCategory } from "@/lib/dida-fields";
-import api, { exportSinglePdf, emailPrediction } from "@/lib/api";
+import api, { downloadSinglePdf, emailPrediction } from "@/lib/api";
 
 interface Message {
   role: "user" | "dida";
@@ -512,6 +512,8 @@ function ResultCard({
   const [emailing, setEmailing] = useState(false);
   const [sent, setSent] = useState(false);
   const [emailError, setEmailError] = useState<string | null>(null);
+  const [downloading, setDownloading] = useState(false);
+  const [downloadError, setDownloadError] = useState<string | null>(null);
 
   const level = data.riskLevel.toLowerCase();
   const isHigh = level.includes("high");
@@ -522,6 +524,19 @@ function ResultCard({
     ? { bg: "bg-amber-50 dark:bg-amber-950/30", border: "border-amber-300 dark:border-amber-800", text: "text-amber-600 dark:text-amber-400", icon: AlertTriangle }
     : { bg: "bg-emerald-50 dark:bg-emerald-950/30", border: "border-emerald-300 dark:border-emerald-800", text: "text-emerald-600 dark:text-emerald-400", icon: ShieldCheck };
   const Icon = palette.icon;
+
+  const handleDownload = async () => {
+    if (!data.predictionId) return;
+    setDownloading(true);
+    setDownloadError(null);
+    try {
+      await downloadSinglePdf(data.predictionId);
+    } catch (e: any) {
+      setDownloadError(e.message || "Could not download PDF.");
+    } finally {
+      setDownloading(false);
+    }
+  };
 
   const handleEmailSend = async () => {
     if (!emailInput.trim() || !data.predictionId) return;
@@ -555,15 +570,14 @@ function ResultCard({
       {isAuthenticated && data.predictionId && (
         <div className="mt-3 space-y-2">
           <div className="flex flex-wrap gap-2">
-            <a
-              href={exportSinglePdf(data.predictionId)}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center gap-1.5 rounded-lg border bg-background px-3 py-1.5 text-xs font-medium hover:bg-muted transition-colors"
+            <button
+              onClick={handleDownload}
+              disabled={downloading}
+              className="flex items-center gap-1.5 rounded-lg border bg-background px-3 py-1.5 text-xs font-medium hover:bg-muted transition-colors disabled:opacity-50"
             >
               <Download className="h-3.5 w-3.5" />
-              Download PDF
-            </a>
+              {downloading ? "Downloading…" : "Download PDF"}
+            </button>
             {!sent && (
               <button
                 onClick={() => setShowEmailBox((v) => !v)}
@@ -574,6 +588,7 @@ function ResultCard({
               </button>
             )}
           </div>
+          {downloadError && <p className="text-xs text-red-500">{downloadError}</p>}
 
           {showEmailBox && !sent && (
             <div className="flex gap-2">
@@ -612,3 +627,4 @@ function ResultCard({
     </div>
   );
 }
+

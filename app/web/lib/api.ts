@@ -69,17 +69,42 @@ export const explainShap = (data: Record<string, number>) =>
 export const getGlobalImportance = () =>
   api.get("/explain/global").then((r) => r.data);
 
-export const exportBatchCsv = (jobId: number, filter: "high" | "moderate" | "low" | "all") =>
-  `${process.env.NEXT_PUBLIC_API_URL}/export/batch/${jobId}/${filter}`;
+// ── Authenticated file downloads ────────────────────────────────
+// These export routes require a Bearer token, which a plain <a href>
+// link can never send (browsers don't attach custom headers to normal
+// navigation). So we fetch as a blob through the authed `api` instance
+// instead, then trigger the save client-side.
+function triggerBlobDownload(blob: Blob, filename: string) {
+  const url = window.URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  window.URL.revokeObjectURL(url);
+}
 
-export const exportSinglePdf = (predictionId: number) =>
-  `${process.env.NEXT_PUBLIC_API_URL}/export/report/${predictionId}/pdf`;
+export const downloadSinglePdf = async (predictionId: number) => {
+  const res = await api.get(`/export/report/${predictionId}/pdf`, { responseType: "blob" });
+  triggerBlobDownload(res.data, `diabetes_risk_report_${predictionId}.pdf`);
+};
+
+export const downloadBatchCsv = async (
+  jobId: number,
+  filter: "high" | "moderate" | "low" | "all"
+) => {
+  const res = await api.get(`/export/batch/${jobId}/${filter}`, { responseType: "blob" });
+  triggerBlobDownload(res.data, `diabetes_risk_${filter}_${jobId}.csv`);
+};
+
+export const downloadBatchPdf = async (jobId: number) => {
+  const res = await api.get(`/export/batch/${jobId}/summary/pdf`, { responseType: "blob" });
+  triggerBlobDownload(res.data, `batch_summary_${jobId}.pdf`);
+};
 
 export const emailPrediction = (predictionId: number, email: string) =>
   api.post(`/export/report/${predictionId}/email`, { email }).then((r) => r.data);
-
-export const exportBatchPdf = (jobId: number) =>
-  `${process.env.NEXT_PUBLIC_API_URL}/export/batch/${jobId}/summary/pdf`;
 
 export const healthCheck = () =>
   api.get("/health").then((r) => r.data);

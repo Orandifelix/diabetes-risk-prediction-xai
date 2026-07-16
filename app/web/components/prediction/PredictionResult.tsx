@@ -1,11 +1,12 @@
 "use client";
+import { useState } from "react";
 import { motion } from "framer-motion";
 import { RiskGauge } from "./RiskGauge";
 import { ShapChart } from "./ShapChart";
 import { DisclaimerBanner } from "@/components/shared/DisclaimerBanner";
-import { CheckCircle, Download, Save, ChevronRight } from "lucide-react";
+import { CheckCircle, Download, Save, ChevronRight, Loader2 } from "lucide-react";
 import type { PredictionResponse } from "@/types";
-import { exportSinglePdf } from "@/lib/api";
+import { downloadSinglePdf } from "@/lib/api";
 
 interface PredictionResultProps {
   result:       PredictionResponse;
@@ -17,6 +18,20 @@ interface PredictionResultProps {
 export function PredictionResult({
   result, predictionId, onSave, isAuthenticated,
 }: PredictionResultProps) {
+  const [downloading, setDownloading] = useState(false);
+
+  const handleDownload = async () => {
+    if (!predictionId) return;
+    setDownloading(true);
+    try {
+      await downloadSinglePdf(predictionId);
+    } catch {
+      // toast/error handling can be wired up here if desired
+    } finally {
+      setDownloading(false);
+    }
+  };
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -52,15 +67,14 @@ export function PredictionResult({
             {/* Actions */}
             <div className="flex flex-wrap gap-2">
               {predictionId && (
-                <a
-                  href={exportSinglePdf(predictionId)}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-2 rounded-lg border px-3 py-2 text-sm font-medium hover:bg-muted transition-colors"
+                <button
+                  onClick={handleDownload}
+                  disabled={downloading}
+                  className="flex items-center gap-2 rounded-lg border px-3 py-2 text-sm font-medium hover:bg-muted transition-colors disabled:opacity-50"
                 >
-                  <Download className="h-4 w-4" />
-                  Download PDF
-                </a>
+                  {downloading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
+                  {downloading ? "Downloading…" : "Download PDF"}
+                </button>
               )}
               {!isAuthenticated && (
                 <a

@@ -1,14 +1,17 @@
 "use client";
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { getHistory, getBatchHistory, exportSinglePdf, exportBatchPdf, exportBatchCsv } from "@/lib/api";
+import { getHistory, getBatchHistory, downloadSinglePdf, downloadBatchPdf, downloadBatchCsv } from "@/lib/api";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { RiskBadge } from "@/components/shared/RiskBadge";
 import { TableSkeleton } from "@/components/shared/LoadingSkeleton";
-import { Download, FileText, File } from "lucide-react";
+import { Download, FileText, File, Loader2 } from "lucide-react";
 import { formatDate, formatProbability } from "@/lib/utils";
 import type { PredictionHistoryItem, BatchJob, RiskLevel } from "@/types";
 
 export default function ReportsPage() {
+  const [downloadingKey, setDownloadingKey] = useState<string | null>(null);
+
   const { data: predictions, isLoading: predLoading } = useQuery({
     queryKey: ["history-reports"],
     queryFn:  () => getHistory({ page: 1, limit: 20 } as any),
@@ -18,6 +21,17 @@ export default function ReportsPage() {
     queryKey: ["batch-reports"],
     queryFn:  () => getBatchHistory({ page: 1 }),
   });
+
+  const runDownload = async (key: string, fn: () => Promise<void>) => {
+    setDownloadingKey(key);
+    try {
+      await fn();
+    } catch {
+      // could surface a toast here
+    } finally {
+      setDownloadingKey(null);
+    }
+  };
 
   return (
     <div className="space-y-8">
@@ -52,14 +66,18 @@ export default function ReportsPage() {
                     <td className="px-4 py-3"><RiskBadge riskLevel={p.risk_level as RiskLevel} size="sm" /></td>
                     <td className="px-4 py-3 text-muted-foreground text-xs">{p.top_risk_factor || "—"}</td>
                     <td className="px-4 py-3 text-right">
-                      <a
-                        href={exportSinglePdf(p.id)}
-                        download
-                        className="inline-flex items-center gap-1 rounded-md border px-2.5 py-1 text-xs font-medium hover:bg-muted transition-colors"
+                      <button
+                        onClick={() => runDownload(`pred-${p.id}`, () => downloadSinglePdf(p.id))}
+                        disabled={downloadingKey === `pred-${p.id}`}
+                        className="inline-flex items-center gap-1 rounded-md border px-2.5 py-1 text-xs font-medium hover:bg-muted transition-colors disabled:opacity-60"
                       >
-                        <FileText className="h-3.5 w-3.5" />
+                        {downloadingKey === `pred-${p.id}` ? (
+                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                        ) : (
+                          <FileText className="h-3.5 w-3.5" />
+                        )}
                         PDF
-                      </a>
+                      </button>
                     </td>
                   </tr>
                 ))}
@@ -91,14 +109,18 @@ export default function ReportsPage() {
                       </p>
                     </div>
                     {/* Summary PDF */}
-                    <a
-                      href={exportBatchPdf(job.id)}
-                      download
-                      className="shrink-0 inline-flex items-center gap-1 rounded-md bg-primary-50 border border-primary-200 px-2.5 py-1 text-xs font-medium text-primary-700 hover:bg-primary-100 transition-colors"
+                    <button
+                      onClick={() => runDownload(`batch-pdf-${job.id}`, () => downloadBatchPdf(job.id))}
+                      disabled={downloadingKey === `batch-pdf-${job.id}`}
+                      className="shrink-0 inline-flex items-center gap-1 rounded-md bg-primary-50 border border-primary-200 px-2.5 py-1 text-xs font-medium text-primary-700 hover:bg-primary-100 transition-colors disabled:opacity-60"
                     >
-                      <FileText className="h-3.5 w-3.5" />
+                      {downloadingKey === `batch-pdf-${job.id}` ? (
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      ) : (
+                        <FileText className="h-3.5 w-3.5" />
+                      )}
                       Summary PDF
-                    </a>
+                    </button>
                   </div>
 
                   {/* CSV downloads by risk */}
@@ -109,15 +131,19 @@ export default function ReportsPage() {
                       { filter: "low",      label: `Low Risk (${job.low_risk_count})`,       cls: "text-green-600 border-green-200 bg-green-50 hover:bg-green-100" },
                       { filter: "all",      label: `All (${job.total_rows})`,                cls: "text-slate-600 border-slate-200 bg-slate-50 hover:bg-slate-100" },
                     ].map(({ filter, label, cls }) => (
-                      <a
+                      <button
                         key={filter}
-                        href={exportBatchCsv(job.id, filter as any)}
-                        download
-                        className={`inline-flex items-center gap-1 rounded-md border px-2.5 py-1 text-xs font-medium transition-colors ${cls}`}
+                        onClick={() => runDownload(`batch-csv-${job.id}-${filter}`, () => downloadBatchCsv(job.id, filter as any))}
+                        disabled={downloadingKey === `batch-csv-${job.id}-${filter}`}
+                        className={`inline-flex items-center gap-1 rounded-md border px-2.5 py-1 text-xs font-medium transition-colors disabled:opacity-60 ${cls}`}
                       >
-                        <Download className="h-3 w-3" />
+                        {downloadingKey === `batch-csv-${job.id}-${filter}` ? (
+                          <Loader2 className="h-3 w-3 animate-spin" />
+                        ) : (
+                          <Download className="h-3 w-3" />
+                        )}
                         {label}
-                      </a>
+                      </button>
                     ))}
                   </div>
                 </div>

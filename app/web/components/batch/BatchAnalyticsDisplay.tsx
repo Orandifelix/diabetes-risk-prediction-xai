@@ -1,12 +1,13 @@
 "use client";
+import { useState } from "react";
 import {
   PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis,
   CartesianGrid, Tooltip, ResponsiveContainer, Legend,
 } from "recharts";
-import { Download, FileText } from "lucide-react";
+import { Download, FileText, Loader2 } from "lucide-react";
 import { StatCard } from "@/components/shared/StatCard";
 import { Activity, TrendingUp, Users, AlertTriangle } from "lucide-react";
-import { exportBatchCsv, exportBatchPdf } from "@/lib/api";
+import { downloadBatchCsv, downloadBatchPdf } from "@/lib/api";
 import type { BatchAnalytics } from "@/types";
 import { formatProbability } from "@/lib/utils";
 
@@ -21,6 +22,31 @@ const RISK_COLORS = {
 };
 
 export function BatchAnalyticsDisplay({ analytics }: BatchAnalyticsDisplayProps) {
+  const [downloadingFilter, setDownloadingFilter] = useState<string | null>(null);
+  const [downloadingSummary, setDownloadingSummary] = useState(false);
+
+  const handleCsvDownload = async (filter: "high" | "moderate" | "low" | "all") => {
+    setDownloadingFilter(filter);
+    try {
+      await downloadBatchCsv(analytics.id, filter);
+    } catch {
+      // could surface a toast here
+    } finally {
+      setDownloadingFilter(null);
+    }
+  };
+
+  const handleSummaryDownload = async () => {
+    setDownloadingSummary(true);
+    try {
+      await downloadBatchPdf(analytics.id);
+    } catch {
+      // could surface a toast here
+    } finally {
+      setDownloadingSummary(false);
+    }
+  };
+
   const pieData = [
     { name: "High Risk",     value: analytics.high_risk_count,     pct: analytics.high_risk_pct     },
     { name: "Moderate Risk", value: analytics.moderate_risk_count, pct: analytics.moderate_risk_pct },
@@ -37,17 +63,23 @@ export function BatchAnalyticsDisplay({ analytics }: BatchAnalyticsDisplayProps)
           { filter: "low",      label: "Low Risk",      count: analytics.low_risk_count,      color: "success" },
           { filter: "all",      label: "All Patients",  count: analytics.total_rows,          color: "primary" },
         ].map(({ filter, label, count, color }) => (
-          <a
+          <button
             key={filter}
-            href={exportBatchCsv(analytics.id, filter as any)}
-            download
-            className={`flex flex-col items-center rounded-xl border p-4 hover:shadow-md transition-all cursor-pointer group`}
+            onClick={() => handleCsvDownload(filter as any)}
+            disabled={downloadingFilter === filter}
+            className={`flex flex-col items-center rounded-xl border p-4 hover:shadow-md transition-all cursor-pointer group disabled:opacity-60`}
           >
-            <Download className="h-5 w-5 text-muted-foreground group-hover:text-primary-500 mb-2 transition-colors" />
+            {downloadingFilter === filter ? (
+              <Loader2 className="h-5 w-5 text-primary-500 mb-2 animate-spin" />
+            ) : (
+              <Download className="h-5 w-5 text-muted-foreground group-hover:text-primary-500 mb-2 transition-colors" />
+            )}
             <p className="text-lg font-bold font-mono">{count}</p>
             <p className="text-xs text-muted-foreground text-center">{label}</p>
-            <span className="mt-2 text-xs text-primary-500 font-medium">↓ CSV</span>
-          </a>
+            <span className="mt-2 text-xs text-primary-500 font-medium">
+              {downloadingFilter === filter ? "Downloading…" : "↓ CSV"}
+            </span>
+          </button>
         ))}
       </div>
 
@@ -143,14 +175,14 @@ export function BatchAnalyticsDisplay({ analytics }: BatchAnalyticsDisplayProps)
 
       {/* PDF summary download */}
       <div className="flex justify-end">
-        <a
-          href={exportBatchPdf(analytics.id)}
-          download
-          className="flex items-center gap-2 rounded-lg border px-4 py-2 text-sm font-medium hover:bg-muted transition-colors"
+        <button
+          onClick={handleSummaryDownload}
+          disabled={downloadingSummary}
+          className="flex items-center gap-2 rounded-lg border px-4 py-2 text-sm font-medium hover:bg-muted transition-colors disabled:opacity-60"
         >
-          <FileText className="h-4 w-4" />
-          Download Summary PDF
-        </a>
+          {downloadingSummary ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileText className="h-4 w-4" />}
+          {downloadingSummary ? "Downloading…" : "Download Summary PDF"}
+        </button>
       </div>
     </div>
   );
