@@ -16,10 +16,14 @@ class ChatRequest(BaseModel):
 
 
 class ChatResponse(BaseModel):
-    response: str
-    history: list
-    prediction_ready: bool = False
-    prediction_data: Optional[dict] = None
+   response: str
+   history: list
+#    prediction_ready: bool = False
+#    prediction_data: Optional[dict] = None
+#    quick_reply_field: Optional[str] = None
+#    is_numeric_field: bool = False
+
+
 
 
 @router.post("", response_model=ChatResponse)
