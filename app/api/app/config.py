@@ -28,6 +28,13 @@ class Settings(BaseSettings):
     # NVIDIA API Key
     NVIDIA_API_KEY: str = ""
 
+    # SMTP (used to email prediction PDF reports)
+    SMTP_HOST: str = "smtp.gmail.com"
+    SMTP_PORT: int = 587
+    SMTP_USER: str = ""
+    SMTP_PASSWORD: str = ""
+    SMTP_FROM: str = "Diabetes Risk Predictor <no-reply@diabetes-predictor.app>"
+
     # CORS
     ALLOWED_ORIGINS: List[str] = [
         "http://localhost:3000",

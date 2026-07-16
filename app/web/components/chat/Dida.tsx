@@ -1,10 +1,12 @@
 "use client";
 import { useState, useEffect, useRef } from "react";
+import { useSession } from "next-auth/react";
 import { motion, AnimatePresence } from "framer-motion";
-import { MessageCircle, X, Send, Loader2, Bot, Calculator, ShieldCheck, AlertTriangle } from "lucide-react";
+import { MessageCircle, X, Send, Loader2, Bot, Calculator, ShieldCheck, AlertTriangle, Download, Mail, Save } from "lucide-react";
 import axios from "axios";
 import ReactMarkdown from "react-markdown";
 import { DIDA_FIELDS, looksLikeRiskCheckIntent, bmiCategory } from "@/lib/dida-fields";
+import api, { exportSinglePdf, emailPrediction } from "@/lib/api";
 
 interface Message {
   role: "user" | "dida";
@@ -17,11 +19,14 @@ interface PredictionResultData {
   riskLevel: string;   // e.g. "High", "Moderate", "Low"
   probability: number; // 0–1
   summary: string;
+  predictionId?: number; // only present when the prediction was saved (authenticated user)
 }
 
 const TOTAL_FIELDS = DIDA_FIELDS.length;
 
 export function Dida() {
+  const { status } = useSession();
+  const isAuthenticated = status === "authenticated";
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
@@ -106,15 +111,18 @@ export function Dida() {
     setLoading(true);
     pushDida("Thanks — crunching the numbers now…");
     try {
-      const res = await axios.post(`${process.env.NEXT_PUBLIC_API_URL}/predict`, payload);
-      const data = res.data;
+      const data = await api.post("/predict", payload).then((r) => r.data);
 
-      // Adjust these keys if your /predict response uses different names.
-      const riskLevel: string = data.risk_level ?? data.riskLevel ?? "Unknown";
-      const probability: number = data.probability ?? data.risk_score ?? 0;
+      const riskLevel: string = data.risk_level ?? "Unknown";
+      const probability: number = data.probability ?? 0;
+      const predictionId: number | undefined = data.id ?? undefined;
       const summary: string =
-        data.message ??
+        data.recommendation ??
         `Based on your answers, your estimated diabetes risk is ${riskLevel.toLowerCase()}.`;
+
+      const followUp = isAuthenticated
+        ? "Remember — this is a screening estimate, not a diagnosis. I'd recommend discussing these results with a healthcare professional. You can download or email the PDF above, or ask me to explain what's driving this result."
+        : "Remember — this is a screening estimate, not a diagnosis. I'd recommend discussing these results with a healthcare professional. Sign in if you'd like to save, download, or email this result.";
 
       setMessages((prev) => [
         ...prev,
@@ -122,13 +130,9 @@ export function Dida() {
           role: "dida",
           content: "",
           kind: "result",
-          resultData: { riskLevel, probability, summary },
+          resultData: { riskLevel, probability, summary, predictionId },
         },
-        {
-          role: "dida",
-          content:
-            "Remember — this is a screening estimate, not a diagnosis. I'd recommend discussing these results with a healthcare professional. Want me to explain what's driving this result, or share some prevention tips?",
-        },
+        { role: "dida", content: followUp },
       ]);
     } catch {
       pushDida("Sorry, I couldn't complete the prediction just now. Please try again in a moment.");
@@ -151,9 +155,9 @@ export function Dida() {
 
     setLoading(true);
     try {
-      const res = await axios.post(`${process.env.NEXT_PUBLIC_API_URL}/chat`, { message: text, history });
-      setHistory(res.data.history);
-      pushDida(res.data.response);
+      const data = await api.post("/chat", { message: text, history }).then((r) => r.data);
+      setHistory(data.history);
+      pushDida(data.response);
     } catch {
       pushDida("Sorry, I'm having trouble connecting. Please try again.");
     } finally {
@@ -267,7 +271,7 @@ export function Dida() {
             <div className="flex-1 overflow-y-auto p-4 space-y-3 scrollbar-hide">
               {messages.map((msg, i) => {
                 if (msg.kind === "result" && msg.resultData) {
-                  return <ResultCard key={i} data={msg.resultData} />;
+                  return <ResultCard key={i} data={msg.resultData} isAuthenticated={isAuthenticated} />;
                 }
                 return (
                   <div key={i} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
@@ -496,7 +500,19 @@ function NumericQuickInput({ field, onSubmit }: { field: { min?: number; max?: n
 }
 
 // ── Styled, prominent result card ──
-function ResultCard({ data }: { data: { riskLevel: string; probability: number; summary: string } }) {
+function ResultCard({
+  data,
+  isAuthenticated,
+}: {
+  data: PredictionResultData;
+  isAuthenticated: boolean;
+}) {
+  const [showEmailBox, setShowEmailBox] = useState(false);
+  const [emailInput, setEmailInput] = useState("");
+  const [emailing, setEmailing] = useState(false);
+  const [sent, setSent] = useState(false);
+  const [emailError, setEmailError] = useState<string | null>(null);
+
   const level = data.riskLevel.toLowerCase();
   const isHigh = level.includes("high");
   const isModerate = level.includes("moderate") || level.includes("medium");
@@ -506,6 +522,20 @@ function ResultCard({ data }: { data: { riskLevel: string; probability: number; 
     ? { bg: "bg-amber-50 dark:bg-amber-950/30", border: "border-amber-300 dark:border-amber-800", text: "text-amber-600 dark:text-amber-400", icon: AlertTriangle }
     : { bg: "bg-emerald-50 dark:bg-emerald-950/30", border: "border-emerald-300 dark:border-emerald-800", text: "text-emerald-600 dark:text-emerald-400", icon: ShieldCheck };
   const Icon = palette.icon;
+
+  const handleEmailSend = async () => {
+    if (!emailInput.trim() || !data.predictionId) return;
+    setEmailing(true);
+    setEmailError(null);
+    try {
+      await emailPrediction(data.predictionId, emailInput.trim());
+      setSent(true);
+    } catch (e: any) {
+      setEmailError(e.message || "Could not send email.");
+    } finally {
+      setEmailing(false);
+    }
+  };
 
   return (
     <div className={`rounded-2xl border-2 ${palette.border} ${palette.bg} p-4 ml-9`}>
@@ -520,7 +550,65 @@ function ResultCard({ data }: { data: { riskLevel: string; probability: number; 
         </p>
       )}
       <p className="text-sm mt-2 leading-relaxed">{data.summary}</p>
+
+      {/* Download/email only available to logged-in users, matching the dashboard */}
+      {isAuthenticated && data.predictionId && (
+        <div className="mt-3 space-y-2">
+          <div className="flex flex-wrap gap-2">
+            <a
+              href={exportSinglePdf(data.predictionId)}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-1.5 rounded-lg border bg-background px-3 py-1.5 text-xs font-medium hover:bg-muted transition-colors"
+            >
+              <Download className="h-3.5 w-3.5" />
+              Download PDF
+            </a>
+            {!sent && (
+              <button
+                onClick={() => setShowEmailBox((v) => !v)}
+                className="flex items-center gap-1.5 rounded-lg border bg-background px-3 py-1.5 text-xs font-medium hover:bg-muted transition-colors"
+              >
+                <Mail className="h-3.5 w-3.5" />
+                Email me a copy
+              </button>
+            )}
+          </div>
+
+          {showEmailBox && !sent && (
+            <div className="flex gap-2">
+              <input
+                type="email"
+                value={emailInput}
+                onChange={(e) => setEmailInput(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && handleEmailSend()}
+                placeholder="you@example.com"
+                className="flex-1 rounded-lg border bg-background px-2.5 py-1.5 text-xs"
+              />
+              <button
+                onClick={handleEmailSend}
+                disabled={emailing || !emailInput.trim()}
+                className="rounded-lg bg-primary-500 px-3 py-1.5 text-xs font-medium text-white disabled:opacity-40 hover:bg-primary-600"
+              >
+                {emailing ? "Sending…" : "Send"}
+              </button>
+            </div>
+          )}
+          {sent && <p className="text-xs text-emerald-600">✓ Sent to {emailInput}</p>}
+          {emailError && <p className="text-xs text-red-500">{emailError}</p>}
+        </div>
+      )}
+
+      {/* Anonymous users: prompt to sign in instead of showing broken download/email buttons */}
+      {!isAuthenticated && (
+        <a
+          href="/login"
+          className="mt-3 flex items-center gap-1.5 w-fit rounded-lg bg-primary-500 px-3 py-1.5 text-xs font-medium text-white hover:bg-primary-600 transition-colors"
+        >
+          <Save className="h-3.5 w-3.5" />
+          Sign in to save & download
+        </a>
+      )}
     </div>
   );
 }
-

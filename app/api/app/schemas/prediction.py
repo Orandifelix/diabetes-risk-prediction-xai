@@ -66,6 +66,7 @@ class PredictionInput(BaseModel):
 
 
 class PredictionResponse(BaseModel):
+    id: Optional[int] = None  # only set when the prediction was saved (i.e. user was authenticated)
     prediction: int
     probability: float
     risk_level: str

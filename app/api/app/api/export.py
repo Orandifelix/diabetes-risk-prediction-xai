@@ -3,6 +3,7 @@ from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from io import BytesIO, StringIO
+from pydantic import BaseModel, EmailStr
 import pandas as pd
 from app.database import get_db
 from app.dependencies import get_current_user
@@ -12,6 +13,7 @@ from app.services.pdf_generator import (
     generate_single_report,
     generate_batch_summary_report,
 )
+from app.services.email_service import send_prediction_report_email
 from app.services.inference import FEATURE_LABELS
 
 router = APIRouter(prefix="/export", tags=["Export"])
@@ -101,13 +103,9 @@ async def export_batch_csv(
     )
 
 
-@router.get("/report/{prediction_id}/pdf")
-async def export_single_pdf(
-    prediction_id: int,
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user),
-):
-    """Download PDF report for a single prediction."""
+async def _get_owned_prediction_or_404(
+    db: AsyncSession, prediction_id: int, current_user: User
+) -> Prediction:
     result = await db.execute(
         select(Prediction).where(
             Prediction.id == prediction_id,
@@ -117,8 +115,11 @@ async def export_single_pdf(
     prediction = result.scalar_one_or_none()
     if not prediction:
         raise HTTPException(status_code=404, detail="Prediction not found.")
+    return prediction
 
-    pdf_bytes = generate_single_report(
+
+def _build_single_report_pdf(prediction: Prediction) -> bytes:
+    return generate_single_report(
         prediction_data={
             "risk_level": prediction.risk_level,
             "probability": prediction.probability,
@@ -129,6 +130,17 @@ async def export_single_pdf(
         recommendation=prediction.recommendation,
     )
 
+
+@router.get("/report/{prediction_id}/pdf")
+async def export_single_pdf(
+    prediction_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Download PDF report for a single prediction."""
+    prediction = await _get_owned_prediction_or_404(db, prediction_id, current_user)
+    pdf_bytes = _build_single_report_pdf(prediction)
+
     return StreamingResponse(
         BytesIO(pdf_bytes),
         media_type="application/pdf",
@@ -136,6 +148,38 @@ async def export_single_pdf(
             "Content-Disposition": f"attachment; filename=diabetes_risk_report_{prediction_id}.pdf"
         },
     )
+
+
+class EmailReportRequest(BaseModel):
+    email: EmailStr
+
+
+@router.post("/report/{prediction_id}/email")
+async def email_single_report(
+    prediction_id: int,
+    payload: EmailReportRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Email the PDF report for a single prediction. Requires login and
+    ownership of the prediction, same as the PDF download route."""
+    prediction = await _get_owned_prediction_or_404(db, prediction_id, current_user)
+    pdf_bytes = _build_single_report_pdf(prediction)
+
+    try:
+        send_prediction_report_email(
+            to_email=payload.email,
+            recipient_name=current_user.name,
+            risk_level=prediction.risk_level,
+            pdf_bytes=pdf_bytes,
+            prediction_id=prediction_id,
+        )
+    except Exception:
+        raise HTTPException(
+            status_code=502, detail="Could not send email. Please try again shortly."
+        )
+
+    return {"status": "sent", "email": payload.email}
 
 
 @router.get("/batch/{job_id}/summary/pdf")

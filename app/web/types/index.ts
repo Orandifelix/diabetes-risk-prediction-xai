@@ -17,6 +17,7 @@ export interface PredictionInput {
 }
 
 export interface PredictionResponse {
+  id?:              number; // only present when the prediction was saved (authenticated user)
   prediction:       number;
   probability:      number;
   risk_level:       RiskLevel;

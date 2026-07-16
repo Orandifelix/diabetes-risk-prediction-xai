@@ -75,6 +75,9 @@ export const exportBatchCsv = (jobId: number, filter: "high" | "moderate" | "low
 export const exportSinglePdf = (predictionId: number) =>
   `${process.env.NEXT_PUBLIC_API_URL}/export/report/${predictionId}/pdf`;
 
+export const emailPrediction = (predictionId: number, email: string) =>
+  api.post(`/export/report/${predictionId}/email`, { email }).then((r) => r.data);
+
 export const exportBatchPdf = (jobId: number) =>
   `${process.env.NEXT_PUBLIC_API_URL}/export/batch/${jobId}/summary/pdf`;
 

@@ -64,6 +64,7 @@ async def predict_single(
     recommendation = get_recommendation(top_raw, probability, features)
 
     # Save to history if authenticated
+    saved_id = None
     if current_user:
         record = Prediction(
             user_id=current_user.id,
@@ -78,8 +79,11 @@ async def predict_single(
         )
         db.add(record)
         await db.commit()
+        await db.refresh(record)
+        saved_id = record.id
 
     return PredictionResponse(
+        id=saved_id,
         prediction=prediction,
         probability=probability,
         risk_level=risk_level,
