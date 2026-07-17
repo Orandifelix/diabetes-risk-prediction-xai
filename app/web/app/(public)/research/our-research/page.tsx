@@ -48,6 +48,29 @@ export default function OurResearchPage() {
       </div>
 
       <section className="mb-14">
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="font-display text-2xl font-bold">Read the Full Paper</h2>
+          <a href="/reports/final_report.pdf" download
+            className="flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-medium hover:bg-muted transition-colors">
+            <FileText className="h-3.5 w-3.5" /> Download PDF
+          </a>
+        </div>
+        {/* Native browser PDF viewer: gives page thumbnails, page-jump, search,
+            and zoom out of the box — avoids a long single-scroll HTML page. */}
+        <div className="rounded-2xl border bg-card overflow-hidden shadow-sm" style={{ height: "80vh" }}>
+          <object data="/reports/final_report.pdf" type="application/pdf" width="100%" height="100%">
+            <div className="flex h-full items-center justify-center p-8 text-center text-sm text-muted-foreground">
+              Your browser can&apos;t preview PDFs inline.{" "}
+              <a href="/reports/final_report.pdf" className="text-primary-500 underline ml-1">
+                Open the PDF directly
+              </a>
+              .
+            </div>
+          </object>
+        </div>
+      </section>
+
+      <section className="mb-14">
         <h2 className="font-display text-2xl font-bold mb-6">Methodology Pipeline</h2>
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {PIPELINE.map((p) => (
