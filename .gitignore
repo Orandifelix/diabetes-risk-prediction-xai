@@ -18,12 +18,14 @@ var/
 sdist/
 develop-eggs/
 .installed.cfg
-lib/
-lib64/
+
+# Ignore only root-level Python build directories
+/lib/
+/lib64/
 
 # ── Virtual Environments ──────────────────────
 .env
-.venv
+.venv/
 env/
 venv/
 ENV/
@@ -39,23 +41,23 @@ profile_default/
 ipython_config.py
 
 # ── Data Files ────────────────────────────────
-# Raw and processed datasets — too large for Git
 datasets/raw/*.csv
 datasets/raw/*.xlsx
 datasets/raw/*.json
 datasets/raw/*.parquet
 datasets/raw/*.zip
+
 datasets/processed/*.csv
 datasets/processed/*.xlsx
 datasets/processed/*.json
 datasets/processed/*.parquet
 
-# Keep .gitkeep placeholder files
+# Keep placeholder files
 !datasets/raw/.gitkeep
 !datasets/processed/.gitkeep
 
 # ── Model Artifacts ───────────────────────────
-# Uncomment these if model files become too large for Git
+# Uncomment if model artifacts become too large
 # models/*.joblib
 # models/*.pkl
 # models/*.h5
@@ -63,7 +65,6 @@ datasets/processed/*.parquet
 # models/*.onnx
 
 # ── Environment & Secrets ─────────────────────
-.env
 .env.local
 .env.development
 .env.production
@@ -74,50 +75,39 @@ secrets.yaml
 config/secrets*
 
 # ── OS Files ──────────────────────────────────
-# macOS
 .DS_Store
 .DS_Store?
 ._*
 .Spotlight-V100
 .Trashes
 ehthumbs.db
-
-# Windows
 Thumbs.db
 desktop.ini
 $RECYCLE.BIN/
-
-# Linux
 *~
 .fuse_hidden*
 .directory
 .Trash-*
 
 # ── IDEs and Editors ──────────────────────────
-# VS Code
 .vscode/
 !.vscode/extensions.json
 !.vscode/settings.json
 
-# JetBrains / PyCharm
 .idea/
 *.iml
 *.iws
 *.ipr
 
-# Vim / Neovim
 *.swp
 *.swo
 *.swn
 Session.vim
 .netrwhist
 
-# Emacs
-*~
 \#*\#
 .\#*
 
-# Spyder
 .spyderproject.cfg
 .spyproject/
 
@@ -156,7 +146,7 @@ pip-delete-this-directory.txt
 tmp/
 temp/
 
-# ── Node.js (for frontend in app/) ────────────
+# ── Node.js / Next.js ─────────────────────────
 node_modules/
 npm-debug.log*
 yarn-debug.log*
@@ -178,4 +168,7 @@ out/
 *.seed
 *.pid.lock
 .hypothesis/
-.benchmarks/
+
+# Benchmark data
+.benchmarks/datasets/raw/*.XPT
+datasets/raw/*.XPT
