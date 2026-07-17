@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { MessageCircle, X, Send, Loader2, Bot, Calculator, ShieldCheck, AlertTriangle, Download, Mail, Save } from "lucide-react";
 import axios from "axios";
 import ReactMarkdown from "react-markdown";
-import { DIDA_FIELDS, looksLikeRiskCheckIntent, bmiCategory } from "@/lib/dida-fields";
+import { DIDA_FIELDS, looksLikeRiskCheckIntent, looksLikeAffirmative, looksLikeRiskCheckOffer, bmiCategory } from "@/lib/dida-fields";
 import api, { downloadSinglePdf, emailPrediction } from "@/lib/api";
 
 interface Message {
@@ -45,6 +45,9 @@ export function Dida() {
   const [bmiIn, setBmiIn] = useState("");
   const [bmiCm, setBmiCm] = useState("");
   const [bmiKg, setBmiKg] = useState("");
+  // True right after Dida's last general-chat reply offered to run the
+  // risk check, so a bare "yes" in the next message is understood in context
+  const [pendingRiskOffer, setPendingRiskOffer] = useState(false);
 
   const currentField = collecting ? DIDA_FIELDS[fieldIndex] : null;
 
@@ -81,6 +84,7 @@ export function Dida() {
 
   // ── Start the deterministic collection flow ──
   const startCollecting = () => {
+    setPendingRiskOffer(false);
     setCollecting(true);
     setFieldIndex(0);
     setAnswers({});
@@ -148,16 +152,20 @@ export function Dida() {
     setInput("");
     pushUser(text);
 
-    if (looksLikeRiskCheckIntent(text)) {
+    const respondingToOffer = pendingRiskOffer && looksLikeAffirmative(text);
+    if (looksLikeRiskCheckIntent(text) || respondingToOffer) {
       startCollecting();
       return;
     }
+    // Any other reply moves the conversation past whatever was last offered
+    setPendingRiskOffer(false);
 
     setLoading(true);
     try {
       const data = await api.post("/chat", { message: text, history }).then((r) => r.data);
       setHistory(data.history);
       pushDida(data.response);
+      setPendingRiskOffer(looksLikeRiskCheckOffer(data.response));
     } catch {
       pushDida("Sorry, I'm having trouble connecting. Please try again.");
     } finally {

@@ -1,10 +1,13 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func, desc
+import pandas as pd
+import numpy as np
 from app.database import get_db
 from app.dependencies import get_current_user
 from app.models.user import User
 from app.models.prediction import Prediction, BatchJob
+from app.services.analytics import compute_batch_analytics
 
 router = APIRouter(prefix="/analytics", tags=["Analytics"])
 
@@ -72,7 +75,32 @@ async def get_batch_analytics(
     if not job:
         raise HTTPException(status_code=404, detail="Batch job not found.")
 
+    # Rebuild per-row breakdowns (risk_by_age / risk_by_bmi) from the saved
+    # predictions for this job, reusing the same computation used at upload
+    # time so the numbers always stay consistent.
+    pred_result = await db.execute(
+        select(Prediction).where(Prediction.batch_job_id == job_id)
+    )
+    predictions = pred_result.scalars().all()
+
+    risk_by_age: list = []
+    risk_by_bmi: list = []
+    if predictions:
+        df = pd.DataFrame([p.input_features for p in predictions])
+        probabilities = np.array([p.probability for p in predictions])
+        risk_levels = [p.risk_level for p in predictions]
+        computed = compute_batch_analytics(
+            df=df,
+            predictions=probabilities,  # unused inside compute_batch_analytics
+            probabilities=probabilities,
+            risk_levels=risk_levels,
+            global_shap=job.global_shap or {},
+        )
+        risk_by_age = computed["risk_by_age"]
+        risk_by_bmi = computed["risk_by_bmi"]
+
     return {
+        "id": job.id,  # required by the frontend (BatchAnalytics.id) for downloads
         "job_id": job.id,
         "filename": job.filename,
         "total_rows": job.total_rows,
@@ -92,6 +120,8 @@ async def get_batch_analytics(
         "median_probability": job.median_probability,
         "std_probability": job.std_probability,
         "global_shap": job.global_shap,
+        "risk_by_age": risk_by_age,
+        "risk_by_bmi": risk_by_bmi,
         "top_risk_factors": sorted(
             [
                 {"feature": k, "importance": v}
