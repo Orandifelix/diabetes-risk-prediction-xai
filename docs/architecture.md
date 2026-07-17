@@ -1,6 +1,8 @@
 # System Architecture
 
-This document describes the system design, components, and data flow for the Diabetes Risk Predictor.
+This document describes the system design, components, and data flow for the **Diabetes Risk Predictor** — an explainable, full-stack Type 2 diabetes risk-screening platform, covering everything from the trained model through to the deployed web application, conversational assistant, and reporting pipeline.
+
+> **Note:** this document supersedes the earlier notebook-only architecture description. The project has since grown from a standalone modeling notebook into a deployed application; the sections below reflect the system as actually built and shipped.
 
 ---
 
@@ -10,175 +12,210 @@ This document describes the system design, components, and data flow for the Dia
 - [Architecture Diagram](#architecture-diagram)
 - [Components](#components)
 - [Data Flow](#data-flow)
+- [Prediction Pipeline (Runtime)](#prediction-pipeline-runtime)
+- [Conversational Assistant: Dida](#conversational-assistant-dida)
 - [Model Artifacts](#model-artifacts)
+- [Security & Access Control](#security--access-control)
+- [Deployment Topology](#deployment-topology)
 - [Directory Structure](#directory-structure)
 
 ---
 
 ## Overview
 
-The Diabetes Risk Predictor is structured as a data science pipeline that takes raw clinical data through preprocessing, model training, evaluation, and explainability. The system produces two saved artifacts — a trained XGBoost classifier and a fitted preprocessing pipeline — which will serve as the foundation for a future API deployment.
+The platform is a **production-style, full-stack application**, not a research notebook. It consists of a machine learning core (data pipeline, trained CatBoost classifier, SHAP/LIME explainability), wrapped in a FastAPI backend and a Next.js dashboard, with supporting infrastructure for authentication, persistence, batch processing, multi-channel reporting, and a hybrid LLM-driven conversational assistant ("Dida").
+
+The system trains on the CDC's 2023 Behavioral Risk Factor Surveillance System (BRFSS) survey (429,086 respondents) using fourteen self-reportable features, and serves predictions through three interaction surfaces that all converge on the same backend prediction endpoint:
+
+1. A structured, multi-step web form (`/dashboard/predict`)
+2. A batch CSV upload for cohort-level screening (`/dashboard/batch`)
+3. Dida, a conversational assistant embedded across the app
 
 ---
 
 ## Architecture Diagram
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                        Data Layer                           │
-│                                                             │
-│   datasets/raw/              datasets/processed/            │
-│   └── diabetes.csv           └── diabetes_clean.csv         │
-└──────────────────────────┬──────────────────────────────────┘
-                           │
-                           ▼
-┌─────────────────────────────────────────────────────────────┐
-│                     Notebook Pipeline                       │
-│                                                             │
-│   1. Data Understanding   →   Summary stats, dtypes         │
-│   2. EDA                  →   Distributions, correlations   │
-│   3. Feature Engineering  →   Encoding, scaling, selection  │
-│   4. Model Training       →   Six classifiers compared      │
-│   5. Hyperparameter Tuning →  Optuna optimization           │
-│   6. Model Evaluation     →   Metrics, confusion matrix     │
-│   7. Explainability       →   SHAP global, LIME local       │
-└──────────────────────────┬──────────────────────────────────┘
-                           │
-                           ▼
-┌─────────────────────────────────────────────────────────────┐
-│                     Model Artifacts                         │
-│                                                             │
-│   models/                                                   │
-│   ├── final_model.joblib       XGBoost classifier           │
-│   ├── preprocessor.joblib      Fitted sklearn pipeline      │
-│   └── metadata.json            Version, metrics, features   │
-└──────────────────────────┬──────────────────────────────────┘
-                           │
-                           ▼
-┌─────────────────────────────────────────────────────────────┐
-│                  Explainability Layer                       │
-│                                                             │
-│   SHAP  →  Global feature importance                        │
-│            Feature contribution per prediction              │
-│            Summary plots, waterfall plots                   │
-│                                                             │
-│   LIME  →  Local prediction explanations                    │
-│            Patient-level decision interpretation            │
-└─────────────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────────────────┐
+│                            PRESENTATION LAYER                            │
+│                         Next.js 14 (App Router)                          │
+│                                                                            │
+│  Public pages          Dashboard (auth)         Dida (global widget)     │
+│  /research/*           /dashboard/predict        Open chat  → LLM        │
+│  /about/*              /dashboard/batch          Risk check → state      │
+│  /risk-assessment      /dashboard/history           machine (client)     │
+│                        /dashboard/analytics                              │
+│                        /dashboard/reports                                │
+└───────────────────────────────┬────────────────────────────────────────┘
+                                 │  REST (JWT bearer, axios `api` instance)
+                                 ▼
+┌──────────────────────────────────────────────────────────────────────────┐
+│                          APPLICATION / API LAYER                         │
+│                              FastAPI (async)                             │
+│                                                                            │
+│  /auth       /predict     /batch      /history    /analytics             │
+│  /export     /chat        /explainability          /health               │
+└───────┬───────────────┬───────────────┬────────────────┬────────────────┘
+        │               │               │                │
+        ▼               ▼               ▼                ▼
+┌───────────────┐ ┌─────────────┐ ┌─────────────┐ ┌─────────────────────┐
+│  ML / XAI      │ │ Conversational│ │  Data &     │ │   Reporting          │
+│  Layer         │ │ AI (Dida)    │ │  Persistence│ │   Layer              │
+│               │ │              │ │             │ │                      │
+│ CatBoost       │ │ Llama-3.1-8B │ │ PostgreSQL  │ │ ReportLab (PDF)      │
+│ classifier     │ │ (NVIDIA API) │ │ via async   │ │ CSV export           │
+│ + preprocessor │ │ — open chat  │ │ SQLAlchemy  │ │ SMTP email delivery  │
+│               │ │   only        │ │             │ │                      │
+│ SHAP           │ │              │ │ users        │ │                      │
+│ TreeExplainer  │ │              │ │ predictions  │ │                      │
+│ LIME explainer │ │              │ │ batch_jobs   │ │                      │
+└───────────────┘ └─────────────┘ └─────────────┘ └─────────────────────┘
+        │
+        ▼
+┌──────────────────────────────────────────────────────────────────────────┐
+│                          IDENTITY & ACCESS LAYER                         │
+│         Google OAuth 2.0 (NextAuth)  →  JWT bearer  →  FastAPI           │
+│    Anonymous prediction allowed · Persistence/export/email require auth │
+└──────────────────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
 ## Components
 
-### 1. Data Layer
+### 1. Presentation Layer — Next.js 14 (App Router)
 
-| Path | Description |
+| Route group | Purpose |
 |---|---|
-| `datasets/raw/` | Original unmodified source data — never edited directly |
-| `datasets/processed/` | Cleaned, encoded, and scaled data ready for training |
+| `app/(public)/` | Marketing/informational pages: `about/*` (diabetes education), `research/*` (dataset, model card, prior research, our research paper, XAI methodology), `risk-assessment` (anonymous single prediction) |
+| `app/(auth)/login` | Google OAuth sign-in via NextAuth |
+| `app/(dashboard)/dashboard/*` | Authenticated area: `predict`, `batch`, `history`, `analytics`, `reports`, `profile`, `settings` |
+| `components/chat/Dida.tsx` | Global floating assistant, mounted app-wide via `app/layout.tsx`, session-aware via `useSession()` |
 
-Raw data is never modified in place. All transformations produce new files in `datasets/processed/`.
+All authenticated API calls go through a single axios instance (`lib/api.ts`) whose request interceptor attaches the NextAuth JWT as a `Bearer` token. File downloads (PDF/CSV) are fetched as authenticated blobs and saved client-side rather than via plain `<a href>` links, since browsers do not attach custom headers to normal link navigation.
 
-### 2. Notebook Pipeline
+### 2. Application / API Layer — FastAPI
 
-The single notebook `notebooks/diabetes_prediction.ipynb` implements the full pipeline end-to-end. Each section is self-contained and annotated with markdown explaining the decisions made.
-
-| Section | Output |
+| Router | Responsibility |
 |---|---|
-| Data Understanding | Summary statistics, missing value report |
-| EDA | Figures saved to `images/02_eda/` |
-| Feature Engineering | Figures saved to `images/03_feature_engineering/` |
-| Model Training | Trained model objects, training curves |
-| Hyperparameter Tuning | Best parameters via Optuna |
-| Model Evaluation | Metrics table, confusion matrix, ROC curve |
-| Explainability | SHAP summary, waterfall plots, LIME explanations |
+| `api/auth.py` | Google OAuth token verification, user upsert, JWT issuance |
+| `api/predict.py` | Single-prediction endpoint; used by both the structured form and Dida |
+| `api/batch.py` | CSV upload, row-by-row batch scoring, batch job persistence |
+| `api/history.py` | Paginated prediction history for the authenticated user |
+| `api/analytics.py` | Dashboard summary stats and per-batch analytics (risk-by-age, risk-by-BMI, global SHAP) |
+| `api/export.py` | Authenticated PDF/CSV export and SMTP email delivery, scoped to resource ownership |
+| `api/explainability.py` | Standalone SHAP/LIME explanation endpoints |
+| `api/chat.py` | Dida's open-ended conversation endpoint (LLM call only — see below) |
+| `api/health.py` | Liveness/readiness check |
 
-### 3. Preprocessing Pipeline
+### 3. ML / Explainability Layer
 
-Built using `sklearn.pipeline.Pipeline`, the preprocessor handles:
+- **Model**: CatBoost gradient-boosting classifier, trained on 14 BRFSS-derived features (see [Model Artifacts](#model-artifacts)), loaded once at API startup (`inference_service.load()` in the FastAPI lifespan handler).
+- **Preprocessing**: a fitted pipeline applied identically at training and inference time.
+- **Explainability**: `shap.TreeExplainer` computes exact per-prediction and global Shapley values directly on the CatBoost model; LIME's `LimeTabularExplainer` independently generates a locally faithful surrogate explanation for the same prediction, giving two independently-derived explanations per result.
 
-- **Missing value imputation** — median strategy for numerical features
-- **Outlier treatment** — IQR-based capping
-- **Feature scaling** — `StandardScaler` for numerical features
-- **Encoding** — `OrdinalEncoder` for any categorical features
+### 4. Conversational AI — Dida
 
-The fitted pipeline is saved to `models/preprocessor.joblib` so the same transformations applied during training are reproduced exactly at inference time.
+Dida is deliberately split into two architecturally separate layers (see [Conversational Assistant: Dida](#conversational-assistant-dida) for the full rationale):
 
-### 4. Model Layer
+- An **LLM layer** (Llama-3.1-8B-Instruct via NVIDIA's API) that only ever handles open-ended dialogue — answering questions, explaining a result, offering prevention tips.
+- A **deterministic client-side layer** that owns the fourteen-question data collection flow and the actual prediction call, with no LLM involvement in tracking assessment state.
 
-Six classifiers are trained and compared:
+### 5. Data & Persistence Layer
 
-| Model | Role |
+Async SQLAlchemy over PostgreSQL. Core tables:
+
+| Table | Purpose |
 |---|---|
-| Logistic Regression | Interpretable baseline |
-| Decision Tree | Non-linear baseline |
-| Random Forest | Ensemble — bagging |
-| XGBoost | Ensemble — gradient boosting (final model) |
-| LightGBM | Ensemble — fast gradient boosting |
-| CatBoost | Ensemble — categorical boosting |
+| `users` | Google-authenticated accounts |
+| `predictions` | Individual predictions — input features, prediction, probability, risk level, SHAP values, recommendation, owning user (nullable for anonymous) |
+| `batch_jobs` | Batch upload metadata and aggregate statistics; individual rows are stored as `predictions` linked via `batch_job_id` |
 
-The best-performing model is saved to `models/final_model.joblib`.
+### 6. Reporting Layer
 
-### 5. Explainability Layer
+- **PDF generation** (`services/pdf_generator.py`, ReportLab): single-patient report and batch executive-summary report.
+- **CSV export**: batch results filtered by risk tier (high / moderate / low / all).
+- **Email delivery** (`services/email_service.py`, stdlib `smtplib`): sends the single-patient PDF as an attachment via SMTP.
 
-| Tool | Scope | Output |
-|---|---|---|
-| SHAP | Global + local | Feature importance, waterfall plots |
-| LIME | Local | Patient-level text explanations |
+All export and email endpoints verify both authentication and resource ownership before serving data.
 
-SHAP operates directly on the XGBoost model using `shap.TreeExplainer` for efficiency. LIME uses `lime.lime_tabular.LimeTabularExplainer` on the full pipeline output.
+### 7. Identity & Access Layer
+
+Google OAuth 2.0 via NextAuth issues a JWT that FastAPI verifies via `HTTPBearer` (`app/dependencies.py`). Two dependency variants are used throughout the API:
+
+- `get_current_user` — required auth; used by export, email, and any endpoint returning personal data.
+- `get_optional_user` — auth is attached if present but not required; used by `/predict` so anonymous screening remains possible, and by `/chat` for optional personalization.
 
 ---
 
 ## Data Flow
 
 ```
-Raw CSV
+CDC BRFSS 2023 survey (429,086 respondents)
    │
    ▼
-Load with Pandas
+Notebook pipeline (notebooks/) — offline, one-time
+   │
+   ├── Data understanding & EDA
+   ├── Feature selection → 14 features (see Model Artifacts)
+   ├── Preprocessing (imputation, native categorical handling)
+   ├── Model training & comparison (CatBoost selected)
+   ├── Threshold tuning (recall-optimised)
+   ├── SHAP / LIME validation
    │
    ▼
-Exploratory Data Analysis
-   │
-   ├── Save figures → images/02_eda/
+Serialized artifacts → models/final_model.joblib, preprocessor.joblib, metadata.json
    │
    ▼
-Feature Engineering
-   │
-   ├── Fit preprocessor
-   ├── Transform dataset
-   ├── Save figures → images/03_feature_engineering/
+Loaded once at FastAPI startup (inference_service)
    │
    ▼
-Model Training
+Runtime prediction request (web form · batch CSV · Dida)
    │
-   ├── Train / evaluate six models
-   ├── Hyperparameter tuning (Optuna)
-   ├── Select best model
-   │
-   ▼
-Model Evaluation
-   │
-   ├── Confusion matrix → images/05_evaluation/
-   ├── ROC curve        → images/05_evaluation/
-   ├── Model comparison → images/05_evaluation/
+   ├── Apply preprocessing pipeline
+   ├── CatBoost inference → prediction, probability, risk tier
+   ├── SHAP TreeExplainer → per-prediction + global attributions
+   ├── LIME → independent local explanation
+   ├── Persist to `predictions` table (if authenticated)
    │
    ▼
-Save Artifacts
+Result delivered to client
    │
-   ├── models/final_model.joblib
-   ├── models/preprocessor.joblib
-   └── models/metadata.json
-   │
-   ▼
-Explainability
-   │
-   ├── SHAP summary    → images/06_interpretability/
-   ├── SHAP waterfall  → images/06_interpretability/
-   └── LIME local      → images/06_interpretability/
+   ├── Visual risk gauge + top SHAP driver + recommendation (all surfaces)
+   ├── PDF download / email (authenticated only)
+   └── Batch: aggregated into `batch_jobs` → analytics dashboard
 ```
+
+---
+
+## Prediction Pipeline (Runtime)
+
+Both the structured form and Dida invoke the **same** `/predict` endpoint — there is a single source of truth for risk computation regardless of interaction modality:
+
+1. Client submits the 14 feature values (JSON body).
+2. API applies the stored preprocessing pipeline.
+3. CatBoost returns a class prediction and probability.
+4. Risk tier (Low / Moderate / High) is derived by thresholding the probability.
+5. SHAP `TreeExplainer` computes per-feature attribution for this specific prediction.
+6. If the request is authenticated, the prediction (including SHAP values and a generated recommendation) is persisted, and the response includes the new `id` — required for later PDF download or email.
+7. If unauthenticated, the prediction is returned but not persisted, and is not downloadable or emailable.
+
+Batch prediction (`/batch`) follows the same per-row logic, additionally computing aggregate statistics (risk-tier counts/percentages, mean/median probability, global SHAP importance, risk-by-age, risk-by-BMI) via `services/analytics.py`, reused identically whether computed at upload time or reconstructed later for the analytics dashboard.
+
+---
+
+## Conversational Assistant: Dida
+
+Dida's architecture is a direct response to a reliability problem found during development: when the fourteen-question assessment was driven entirely by free-form LLM dialogue, the assistant would intermittently lose track of previously collected answers, fail to present selectable options consistently, or never trigger the final prediction call. Small instruction-tuned models are not reliable long-running structured-state trackers.
+
+The fix separates concerns entirely:
+
+| Layer | Owns | Backed by |
+|---|---|---|
+| **Conversational** | Open-ended Q&A, explaining a result's SHAP drivers, prevention tips, deciding *when* to offer starting an assessment | Llama-3.1-8B-Instruct via `/chat` |
+| **Assessment** | The fourteen-question flow itself: question order, rendering the correct input type (buttons vs. numeric), tracking collected answers, calling `/predict` once complete | Client-side React state machine (`lib/dida-fields.ts` + `components/chat/Dida.tsx`) — no LLM involvement |
+
+A lightweight intent layer bridges the two: `looksLikeRiskCheckIntent()` recognises explicit requests ("check my risk"), and `looksLikeRiskCheckOffer()` / `looksLikeAffirmative()` let a bare "yes" be understood correctly when it follows Dida's own offer to start the assessment — without needing the LLM to track that context itself.
 
 ---
 
@@ -186,38 +223,54 @@ Explainability
 
 ### `models/metadata.json`
 
-Stores model metadata written automatically at the end of the training notebook.
-
 ```json
 {
-  "model_name": "XGBoostClassifier",
-  "version": "1.0.0",
-  "trained_date": "2026-06-30",
-  "dataset": "diabetes.csv",
-  "n_samples": 0,
-  "n_features": 8,
+  "model_name": "CatBoostClassifier",
+  "version": "2.0.0",
+  "trained_date": "2026-XX-XX",
+  "dataset": "BRFSS 2023",
+  "n_samples": 429086,
+  "n_features": 14,
   "feature_names": [
-    "Pregnancies",
-    "Glucose",
-    "BloodPressure",
-    "SkinThickness",
-    "Insulin",
-    "BMI",
-    "DiabetesPedigreeFunction",
-    "Age"
+    "_BMI5", "_AGE80", "SEXVAR", "_IMPRACE", "GENHLTH", "PHYSHLTH",
+    "SMOKE100", "_TOTINDA", "EDUCA", "INCOME3",
+    "_RFHYPE6", "_RFCHOL3", "CHCKDNY2", "_MICHD"
   ],
-  "target": "Outcome",
+  "target": "diabetes_diagnosis",
   "classes": [0, 1],
   "metrics": {
-    "accuracy": null,
-    "precision": null,
-    "recall": null,
-    "f1_score": null,
-    "roc_auc": null
+    "recall": 0.75,
+    "roc_auc": 0.82
   },
-  "hyperparameters": {}
+  "explainability": ["SHAP (TreeExplainer)", "LIME (LimeTabularExplainer)"]
 }
 ```
+
+> Fill in `trained_date` and any additional tuned hyperparameters from the actual training run before publishing.
+
+---
+
+## Security & Access Control
+
+- **Authentication**: Google OAuth 2.0 → NextAuth session → JWT bearer token on every authenticated API call.
+- **Ownership checks**: `/export/report/{id}/pdf`, `/export/report/{id}/email`, and batch export routes all verify the requesting user owns the resource before serving it — not just that they are logged in.
+- **Anonymous access**: `/predict` is reachable without authentication to support ungated screening, but anonymous predictions are never persisted, downloadable, or emailable.
+- **Secrets**: SMTP credentials, the NVIDIA API key, and OAuth client secrets are supplied via environment variables (`.env`), never committed.
+
+---
+
+## Deployment Topology
+
+| Component | Runs as |
+|---|---|
+| Frontend (Next.js) | Node.js server / static+SSR hosting (e.g. Vercel or equivalent) |
+| Backend (FastAPI) | ASGI app via `uvicorn`, containerizable |
+| Database | Managed PostgreSQL instance |
+| Model artifacts | Loaded from disk (`ml_models/`) at API startup — not re-trained at request time |
+| LLM (Dida's chat layer) | External inference API call (NVIDIA-hosted Llama-3.1-8B-Instruct) — not self-hosted |
+| Email | Outbound SMTP (e.g. Gmail with an App Password) |
+
+> This section intentionally stays high-level here — full environment variables, hosting provider specifics, and the CI/CD pipeline are covered in the dedicated Deployment presentation/report, not duplicated in this architecture document.
 
 ---
 
@@ -226,29 +279,45 @@ Stores model metadata written automatically at the end of the training notebook.
 ```
 diabetes-risk-prediction-xai/
 │
+├── app/
+│   ├── api/                        ← FastAPI backend
+│   │   └── app/
+│   │       ├── api/                ← Route modules (predict, batch, chat, export, ...)
+│   │       ├── services/           ← inference, analytics, dida, pdf_generator, email_service, ...
+│   │       ├── models/             ← SQLAlchemy models (user, prediction)
+│   │       ├── schemas/            ← Pydantic request/response schemas
+│   │       ├── dependencies.py     ← Auth dependencies (get_current_user, get_optional_user)
+│   │       └── config.py           ← Settings (DB, SMTP, OAuth, NVIDIA API key)
+│   │
+│   └── web/                        ← Next.js frontend
+│       ├── app/                    ← App Router: (public), (auth), (dashboard) route groups
+│       ├── components/             ← chat/Dida.tsx, prediction/, batch/, shared/
+│       ├── lib/                    ← api.ts, dida-fields.ts, auth.ts, utils.ts
+│       ├── types/                  ← Shared TypeScript types
+│       └── public/reports/         ← Static assets (e.g. final_report.pdf)
+│
 ├── datasets/
-│   ├── raw/                    ← Source data (gitignored)
-│   └── processed/              ← Transformed data (gitignored)
+│   ├── raw/                        ← Source BRFSS extract (gitignored)
+│   └── processed/                  ← Cleaned, feature-selected data (gitignored)
 │
 ├── models/
-│   ├── final_model.joblib      ← Trained classifier
-│   ├── preprocessor.joblib     ← Fitted preprocessing pipeline
-│   └── metadata.json           ← Model metadata
+│   ├── final_model.joblib          ← Trained CatBoost classifier
+│   ├── preprocessor.joblib         ← Fitted preprocessing pipeline
+│   └── metadata.json               ← Model metadata (see above)
 │
 ├── notebooks/
-│   └── diabetes_prediction.ipynb
+│   ├── diabetes_prediction.ipynb   ← Full offline modeling pipeline
+│   └── T2DM.ipynb
+│
+├── docs/                           ← architecture.md (this file), dashboard.md, methodology.md
+├── reports/                        ← proposal.pdf, final_report.pdf
+├── presentations/                  ← presentation.pptx/.pdf, speaker_notes.md
+├── submission/                     ← github.pdf, notebook.pdf, presentation.pdf
 │
 └── images/
-    ├── 01_data_understanding/
-    ├── 02_eda/
-    ├── 03_feature_engineering/
-    ├── 04_modeling/
-    ├── 05_evaluation/
-    ├── 06_interpretability/
-    ├── 07_dashboard/
-    └── 08_presentation/
+    ├── 01_data_understanding/ … 08_presentation/
 ```
 
 ---
 
-*Last updated: 2026-06-30*
+*Last updated: 2026-07-17 — rewritten to reflect the deployed FastAPI/Next.js application, CatBoost model on BRFSS 2023, and the Dida conversational assistant, superseding the earlier notebook-only description.*
