@@ -67,7 +67,7 @@ jobs:
         run: |
           test -f presentations/presentation.pdf
           test -f presentations/presentation.pptx
-          test -f presentations/speaker_notes.md
+          test -f presentations/deployment_presentation.pptx
           echo "✅ Presentation verified"
 
       - name: Validate submission
