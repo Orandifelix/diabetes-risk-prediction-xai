@@ -2,28 +2,31 @@
 
 This document explains the modelling decisions, preprocessing choices, and evaluation strategy used in the Diabetes Risk Predictor.
 
+> **Note:** this document supersedes the earlier draft, which described a different, smaller dataset (Pima Indians, 768 samples, 8 features) used in an early phase of the project. It now reflects the actual dataset and modelling approach used in the shipped system.
+
 ---
 
 ## Table of Contents
 
 - [Problem Framing](#problem-framing)
 - [Dataset](#dataset)
+- [Feature Selection](#feature-selection)
 - [Data Preprocessing](#data-preprocessing)
 - [Exploratory Data Analysis](#exploratory-data-analysis)
-- [Feature Engineering](#feature-engineering)
 - [Model Selection](#model-selection)
-- [Hyperparameter Tuning](#hyperparameter-tuning)
+- [Threshold Tuning](#threshold-tuning)
 - [Evaluation Strategy](#evaluation-strategy)
 - [Explainability](#explainability)
 - [Handling Class Imbalance](#handling-class-imbalance)
+- [References](#references)
 
 ---
 
 ## Problem Framing
 
-This is a **binary classification** problem. Given a set of routine clinical measurements, the model predicts whether a patient is at risk of Type 2 diabetes (`Outcome = 1`) or not (`Outcome = 0`).
+This is a **binary classification** problem: given fourteen self-reportable behavioural, demographic, and health-status survey responses, predict whether a respondent is at risk of Type 2 diabetes.
 
-The primary objective is **recall on the positive class** — it is more costly to miss a diabetic patient (false negative) than to flag a healthy patient for follow-up (false positive). This framing influences both model selection and the choice of evaluation metrics.
+The primary objective is **recall on the positive class**. In a screening context, missing a genuinely at-risk respondent (a false negative) is materially more costly than flagging a healthy respondent for unnecessary follow-up (a false positive). This framing drives model selection, threshold tuning, and the choice of headline evaluation metric throughout — accuracy alone is treated as a secondary, supporting metric rather than the optimisation target.
 
 ---
 
@@ -31,177 +34,121 @@ The primary objective is **recall on the positive class** — it is more costly 
 
 | Property | Value |
 |---|---|
-| Source | Kaggle — Diabetes Prediction Dataset |
-| Origin | National Institute of Diabetes and Digestive and Kidney Diseases (NIDDK) |
-| Population | Pima Indian women aged 21 and older |
-| Samples | 768 |
-| Features | 8 clinical features |
-| Target | Binary — `Outcome` (1 = diabetic, 0 = non-diabetic) |
-| Class balance | ~35% positive, ~65% negative |
+| Source | CDC Behavioral Risk Factor Surveillance System (BRFSS), 2023 release |
+| Population | U.S. adults (non-institutionalised), national telephone survey |
+| Samples | 429,086 |
+| Features used | 14 (selected subset — see below) |
+| Target | Binary — prior diabetes diagnosis (self-reported) |
+| Class balance | Imbalanced, consistent with population-level diabetes prevalence (~1 in 8–9 U.S. adults) |
 
-### Features
+BRFSS is an annual, large-scale, self-reported survey — it is not a laboratory or clinical dataset. All fourteen input features are things a respondent can report themselves, without a blood draw or clinic visit, which is precisely what makes the resulting model usable as a low-friction screening tool rather than a diagnostic one.
 
-| Feature | Type | Description |
+---
+
+## Feature Selection
+
+From BRFSS's full variable set (several hundred candidate columns), fourteen features were retained for the production model:
+
+| BRFSS Code | Feature | Category |
 |---|---|---|
-| Pregnancies | Integer | Number of times pregnant |
-| Glucose | Integer | Plasma glucose (2-hr oral glucose tolerance test) |
-| BloodPressure | Integer | Diastolic blood pressure (mm Hg) |
-| SkinThickness | Integer | Triceps skinfold thickness (mm) |
-| Insulin | Integer | 2-hour serum insulin (µU/ml) |
-| BMI | Float | Body mass index (kg/m²) |
-| DiabetesPedigreeFunction | Float | Genetic diabetes risk score |
-| Age | Integer | Age in years |
+| `_BMI5` | Body mass index | Anthropometric |
+| `_AGE80` | Age group (13-level) | Demographic |
+| `SEXVAR` | Sex | Demographic |
+| `_IMPRACE` | Race / ethnicity | Demographic |
+| `GENHLTH` | Self-rated general health | Health status |
+| `PHYSHLTH` | Poor physical health days (30d) | Health status |
+| `SMOKE100` | Smoked ≥100 cigarettes lifetime | Behavioural |
+| `_TOTINDA` | Physical activity (30d) | Behavioural |
+| `EDUCA` | Education level | Socio-economic |
+| `INCOME3` | Household income bracket | Socio-economic |
+| `_RFHYPE6` | Hypertension | Clinical history |
+| `_RFCHOL3` | High cholesterol | Clinical history |
+| `CHCKDNY2` | Kidney disease | Clinical history |
+| `_MICHD` | Coronary heart disease / heart attack | Clinical history |
+
+Selection criteria, in order of priority:
+
+1. **Established association with diabetes risk** in the epidemiological/ML literature (see [References](#references) and the project's research paper).
+2. **Self-reportability** — no laboratory value (e.g. fasting glucose, HbA1c) is used, so the tool never depends on data the respondent doesn't already have.
+3. **Minimal respondent burden** — fourteen fields keeps both the structured web form and Dida's conversational assessment short enough to complete in one sitting, deliberately narrower than the twenty-to-twenty-five-feature sets used in some comparable BRFSS studies.
+
+No additional derived/engineered features are added on top of these fourteen; feature importance (via SHAP, see below) is used to interpret the model rather than to justify adding or dropping inputs post hoc.
 
 ---
 
 ## Data Preprocessing
 
-### Missing Values
+### Missing / Unknown Values
 
-Several features contain biologically impossible zero values that represent missing data — a glucose level of 0, BMI of 0, or blood pressure of 0 is not physiologically valid. These are treated as missing.
+BRFSS uses reserved codes for "don't know," "refused," and "not asked" responses. These are treated as missing rather than as valid category levels.
 
-Affected features: `Glucose`, `BloodPressure`, `SkinThickness`, `Insulin`, `BMI`
+- **Categorical/ordinal features** (e.g. `GENHLTH`, `EDUCA`, `INCOME3`): mode imputation.
+- **Continuous features** (`_BMI5`, `PHYSHLTH`): median imputation, since these features contain outliers that would skew a mean-based fill.
 
-**Strategy:** Replace zeros with `NaN`, then apply median imputation per feature. Median is preferred over mean because these features contain outliers that would skew the mean.
+### Categorical Handling
 
-### Outlier Treatment
-
-Outliers are detected using the Interquartile Range (IQR) method:
-
-```
-Lower bound = Q1 − 1.5 × IQR
-Upper bound = Q3 + 1.5 × IQR
-```
-
-Values outside these bounds are capped (Winsorized) rather than removed, to preserve sample size.
-
-### Feature Scaling
-
-`StandardScaler` is applied to all numerical features after imputation and outlier treatment:
-
-```
-z = (x − μ) / σ
-```
-
-Scaling is fitted on the training set only and applied to the test set using the same fitted parameters — preventing data leakage.
+Unlike the project's earlier phase (which used one-hot encoding for a small Pima-style feature set), the production pipeline relies on **CatBoost's native ordered categorical handling**. Ordinal and categorical BRFSS codes are passed through largely as-is rather than one-hot encoded, avoiding unnecessary dimensionality expansion and letting the model exploit ordinal structure (e.g. `GENHLTH` running from 1=Excellent to 5=Poor) directly.
 
 ### Pipeline
 
-All preprocessing steps are wrapped in a single `sklearn.pipeline.Pipeline` object:
-
-```python
-preprocessor = Pipeline([
-    ('imputer', SimpleImputer(strategy='median')),
-    ('scaler', StandardScaler())
-])
-```
-
-The fitted pipeline is saved to `models/preprocessor.joblib` to ensure training and inference transformations are identical.
+The fitted preprocessing pipeline is saved to `models/preprocessor.joblib` so that training-time and inference-time transformations are guaranteed identical.
 
 ---
 
 ## Exploratory Data Analysis
 
-EDA is conducted before any modelling to understand the data and guide preprocessing decisions. Key analyses include:
+EDA precedes modelling and directly informs the feature-selection and preprocessing decisions above. Key analyses:
 
 | Analysis | Purpose |
 |---|---|
-| Summary statistics | Identify impossible values, ranges, and distributions |
-| Class distribution | Quantify imbalance between diabetic and non-diabetic |
-| Feature distributions | Histograms and KDE plots per feature |
-| Correlation matrix | Identify multicollinearity between features |
-| Boxplots by outcome | Visualize feature separation between classes |
-| Missing value heatmap | Identify patterns in missing data |
+| Summary statistics | Identify reserved/missing codes, ranges, and distributions per feature |
+| Class distribution | Quantify diabetes prevalence in the sample |
+| Feature distributions | Distribution of BMI, age group, general health, etc. |
+| Correlation / association checks | Screen for redundancy among the fourteen selected features |
+| Risk by subgroup | Diabetes rate broken down by age group and BMI range — the same breakdowns later surfaced live in the batch analytics dashboard |
 
-All EDA figures are saved to `images/02_eda/`.
-
----
-
-## Feature Engineering
-
-The dataset uses its original eight features without adding derived features, as the clinical variables are well-defined and domain literature supports their predictive value (Rajkomar et al., 2019).
-
-Feature selection is evaluated using:
-
-- **Correlation with target** — Pearson correlation for initial screening
-- **Feature importance from Random Forest** — tree-based importance scores
-- **SHAP values** — post-hoc feature attribution from the final model
-
-No features are dropped before training. Feature importance analysis informs interpretation rather than elimination.
+All EDA figures are saved under `images/`.
 
 ---
 
 ## Model Selection
 
-Six classifiers are trained and compared to identify the best performer for this dataset:
+CatBoost was selected as the final classifier after comparison against alternative boosting frameworks, on the following grounds:
 
-| Model | Rationale |
+| Consideration | Why CatBoost |
 |---|---|
-| Logistic Regression | Interpretable baseline; establishes a performance floor |
-| Decision Tree | Non-linear baseline; reveals if tree structure helps |
-| Random Forest | Reduces overfitting of single trees via bagging |
-| XGBoost | State-of-the-art gradient boosting; handles tabular data well |
-| LightGBM | Fast gradient boosting; efficient on small datasets |
-| CatBoost | Robust gradient boosting; handles outliers well |
+| Categorical features | Native, ordered handling — no manual one-hot encoding needed for BRFSS's mostly-ordinal/categorical columns |
+| Overfitting resistance | Symmetric tree-growing strategy reduces prediction variance relative to standard XGBoost/LightGBM trees |
+| Explainability compatibility | First-class support for `shap.TreeExplainer`, enabling exact (not approximated) Shapley value computation at production scale |
+| Comparative performance | Competitive-to-superior discriminative performance against XGBoost/LightGBM on tabular, largely categorical survey data in the literature this project draws on |
 
-All models are trained on the same preprocessed training split and evaluated on the same held-out test split to ensure fair comparison.
+The final model is serialized to `models/final_model.joblib`.
 
 ---
 
-## Hyperparameter Tuning
+## Threshold Tuning
 
-Hyperparameter tuning is applied to the final selected model using **Optuna**, a hyperparameter optimization framework based on Tree-structured Parzen Estimator (TPE) sampling.
-
-Tuning is performed with **5-fold stratified cross-validation** to preserve class proportions across folds.
-
-Key hyperparameters tuned for XGBoost:
-
-| Parameter | Search Range |
-|---|---|
-| `n_estimators` | 100 – 1000 |
-| `max_depth` | 3 – 10 |
-| `learning_rate` | 0.01 – 0.3 |
-| `subsample` | 0.6 – 1.0 |
-| `colsample_bytree` | 0.6 – 1.0 |
-| `min_child_weight` | 1 – 10 |
-| `reg_alpha` | 0 – 1 |
-| `reg_lambda` | 0 – 1 |
+Rather than using the default 0.5 probability cutoff, the decision threshold is tuned on a held-out validation split specifically to **favour recall** — deliberately accepting a higher false-positive rate in exchange for fewer missed at-risk respondents. This is consistent with the project's problem framing (see above) and with the design philosophy of comparable recall-optimised BRFSS explainable-AI screening tools in the literature.
 
 ---
 
 ## Evaluation Strategy
 
-### Train / Test Split
+### Train / Validation / Test Split
 
-- **80% training**, 20% test
-- Stratified split to preserve class balance in both sets
-- Random seed fixed for reproducibility
+The dataset is partitioned into training, validation, and held-out test splits. Hyperparameters and the decision threshold are tuned against the validation split only; final performance is reported strictly on the untouched test split.
 
 ### Metrics
 
-Given the recall-prioritised framing of this problem, the following metrics are reported:
-
-| Metric | Why it matters |
+| Metric | Role |
 |---|---|
-| Accuracy | Overall correctness |
-| Precision | Of predicted positives, how many are truly diabetic |
-| Recall | Of true diabetics, how many did the model catch |
-| F1-Score | Harmonic mean of precision and recall |
-| ROC-AUC | Model's ability to discriminate between classes |
+| **Recall (Sensitivity)** | Primary metric — fraction of true at-risk respondents correctly flagged |
+| **ROC-AUC** | Primary metric — overall discriminative ability across thresholds |
+| Precision | Secondary — supports interpreting the recall/false-positive trade-off |
+| F1-score | Secondary |
+| Accuracy | Reported for completeness only; not the optimisation target given class imbalance |
 
-**Primary metric: F1-Score and ROC-AUC**, since accuracy alone is misleading with class imbalance.
-
-### Cross-Validation
-
-5-fold stratified cross-validation is used during:
-- Model comparison (to reduce variance in metric estimates)
-- Hyperparameter tuning (as the optimization objective)
-
-### Success Criteria
-
-The project targets:
-- Accuracy ≥ 85% on the test set
-- F1-Score and ROC-AUC exceeding the logistic regression baseline
+**Current test-set results: 75% recall, 82% ROC-AUC.**
 
 ---
 
@@ -209,32 +156,35 @@ The project targets:
 
 ### SHAP (Global + Local)
 
-`shap.TreeExplainer` is used for efficiency with tree-based models. SHAP values quantify each feature's contribution to a prediction relative to the expected model output.
+`shap.TreeExplainer` runs directly against the CatBoost model for exact, efficient Shapley value computation.
 
-- **Global explanations** — SHAP summary plot showing feature importance across all predictions
-- **Local explanations** — SHAP waterfall plot for individual patient predictions
+- **Global** — feature importance aggregated across the full population (or a specific batch), surfaced in the analytics dashboard.
+- **Local** — per-prediction attribution, showing exactly how much each of the fourteen features pushed one respondent's probability up or down; surfaced alongside every individual result.
 
 ### LIME (Local)
 
-`lime.lime_tabular.LimeTabularExplainer` approximates the model locally around a single prediction using a linear surrogate model. This produces a ranked list of features and their directional influence for each individual case.
+`lime.lime_tabular.LimeTabularExplainer` independently builds a locally faithful linear surrogate around each individual prediction. Because it is computed via a completely different mechanism from SHAP, agreement between the two provides an informal robustness check on any single patient-level explanation.
 
 ---
 
 ## Handling Class Imbalance
 
-The dataset has approximately 35% positive cases. Strategies applied:
+Diabetes prevalence in the general population — and therefore in BRFSS — is naturally imbalanced (roughly one in eight to one in nine U.S. adults). This project deliberately handles that imbalance **without synthetic oversampling (e.g. SMOTE)**, to avoid the distributional distortion risk that resampling can introduce on a dataset this large. Instead:
 
-- **SMOTE** (Synthetic Minority Oversampling Technique) applied to the training set only — never to the test set, to avoid evaluation bias
-- **Class weight parameter** set to `balanced` during model training as an alternative to SMOTE
-- **Stratified splits** and **stratified cross-validation** to preserve class proportions
+- **Class weighting** is applied during CatBoost training.
+- **Recall-favouring threshold tuning** (see above) directly targets the cost asymmetry between false negatives and false positives, rather than relying on resampling to indirectly achieve the same goal.
 
 ---
 
 ## References
 
+Carvalho, D. V., Pereira, E. M., & Cardoso, J. S. (2019). Machine learning interpretability: A survey on methods and metrics. *Electronics, 8*(8), 832.
+
 International Diabetes Federation. (2021). *IDF Diabetes Atlas* (10th ed.). https://www.diabetesatlas.org
 
 Lundberg, S. M., & Lee, S. I. (2017). A unified approach to interpreting model predictions. *Advances in Neural Information Processing Systems, 30*, 4765–4774.
+
+Obermeyer, Z., & Emanuel, E. J. (2016). Predicting the future — big data, machine learning, and clinical medicine. *New England Journal of Medicine, 375*(13), 1216–1219.
 
 Rajkomar, A., Dean, J., & Kohane, I. (2019). Machine learning in medicine. *New England Journal of Medicine, 380*(14), 1347–1358.
 
@@ -242,4 +192,4 @@ Ribeiro, M. T., Singh, S., & Guestrin, C. (2016). "Why should I trust you?" Expl
 
 ---
 
-*Last updated: 2026-06-30*
+*Last updated: 2026-07-17 — rewritten for the BRFSS 2023 / CatBoost pipeline, superseding the earlier Pima-dataset draft.*
