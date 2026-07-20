@@ -33,7 +33,7 @@ const FEATURES = [
   {
     icon: Users,
     title:       "Clinician-Friendly",
-    description: "Risk broken down by age, BMI, and lifestyle — ready for clinical review.",
+    description: "Risk broken down by age, BMI, and lifestyle ready for clinical review.",
     color:       "primary",
   },
 ];
@@ -65,7 +65,7 @@ export default function HomePage() {
             </h1>
             <p className="mt-4 text-lg text-muted-foreground max-w-lg">
               An end-to-end Type 2 diabetes risk prediction platform powered by
-              XGBoost and Explainable AI — providing accurate predictions and
+              XGBoost and Explainable AI, providing accurate predictions and
               transparent, clinician-friendly explanations.
             </p>
             <div className="mt-8 flex flex-wrap gap-3">
@@ -163,7 +163,7 @@ export default function HomePage() {
           </h2>
           <p className="text-primary-100 mb-8">
             Answer 14 clinical questions and get your personalised diabetes risk
-            score with SHAP explanations — no account required.
+            score with SHAP explanations, no account required.
           </p>
           <Link
             href="/risk-assessment"
