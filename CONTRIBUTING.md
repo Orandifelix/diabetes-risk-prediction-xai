@@ -85,7 +85,7 @@ All technical steps required to replicate this pipeline are listed here in order
 ### Step 1 — Download the dataset
 
 Place the raw dataset file inside `datasets/raw/`. The dataset used is the
-[Diabetes Prediction Dataset](https://www.kaggle.com/) from Kaggle.
+[Diabetes Prediction Dataset](https://drive.google.com/drive/folders/1AEyBCBPiPwVOYJfuQxNHFuYbA_v3KdTB?usp=drive_link) from Google Drive.
 
 ```bash
 datasets/raw/diabetes.csv
