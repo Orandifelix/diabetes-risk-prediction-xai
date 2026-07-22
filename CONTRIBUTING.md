@@ -82,13 +82,31 @@ python -c "import sklearn, xgboost, shap, lime; print('Environment OK')"
 
 All technical steps required to replicate this pipeline are listed here in order.
 
-### Step 1 — Download the dataset
+### Step 1 — Download and Extract the Dataset
 
-Place the raw dataset file inside `datasets/raw/`. The dataset used is the
-[Diabetes Prediction Dataset](https://drive.google.com/drive/folders/1AEyBCBPiPwVOYJfuQxNHFuYbA_v3KdTB?usp=drive_link) from Google Drive.
+Download the BRFSS 2023 dataset from the following Google Drive folder:
 
-```bash
-datasets/raw/diabetes.csv
+**Dataset:**  
+https://drive.google.com/drive/folders/1AEyBCBPiPwVOYJfuQxNHFuYbA_v3KdTB?usp=drive_link
+
+Extract the downloaded archive and place the dataset file:
+
+```text
+CDC_LLCP2023.XPT
+```
+
+inside the following directory:
+
+```text
+datasets/raw/
+```
+
+Your project structure should look like this:
+
+```text
+datasets/
+└── raw/
+    └── CDC_LLCP2023.XPT
 ```
 
 ### Step 2 — Open the notebook
